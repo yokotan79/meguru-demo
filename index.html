@@ -1,0 +1,1931 @@
+<title>MEGURU 配車システム</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+/* Layout: 藍のヘッダー帯の下に、オペレーターは2カラム(受付|依頼一覧)、運転手はスマホ幅1カラム+下タブ */
+:root{
+  --paper:#EEF0E6; --panel:#E3E6D8; --card:#FBFBF8; --ink:#1A2233; --ink-soft:#4B5266;
+  --indigo:#16213F; --indigo-2:#223058; --on-indigo:#EEF0E6; --on-indigo-soft:#9DA8C6;
+  --gold:#C79A3E; --gold-ink:#8C6A24; --gold-bg:#F7F1E3; --on-gold:#251C08;
+  --teal:#3E6B5C; --teal-ink:#294A3F; --teal-bg:#E1E9E1;
+  --red:#B84A3E; --red-bg:#F3E4E1; --line:rgba(26,34,51,.14); --focus:#C79A3E;
+  --c-solo:#16805E; --c-share:#B07D1E; --grid:rgba(26,34,51,.10); --map-bg:#E9ECE0;
+  --f-display:'Shippori Mincho','Hiragino Mincho ProN','Yu Mincho',serif;
+  --f-body:'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic',system-ui,sans-serif;
+  --f-data:'DotGothic16','Osaka-Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#121725; --panel:#1A2133; --card:#1E263A; --ink:#E6E8DF; --ink-soft:#A3AABB;
+  --indigo:#0B1020; --indigo-2:#26335A; --on-indigo:#E6E8DF; --on-indigo-soft:#8E99B8;
+  --gold:#D4AA55; --gold-ink:#E0BD72; --gold-bg:#2F2818; --on-gold:#1E1606;
+  --teal:#5C9A84; --teal-ink:#8CC4AE; --teal-bg:#1D3029;
+  --red:#E07A6E; --red-bg:#3A2124; --line:rgba(230,232,223,.14); color-scheme:dark;
+  --c-solo:#35A27C; --c-share:#B8862C; --grid:rgba(230,232,223,.10); --map-bg:#182032;
+}}
+:root[data-theme="dark"]{
+  --paper:#121725; --panel:#1A2133; --card:#1E263A; --ink:#E6E8DF; --ink-soft:#A3AABB;
+  --indigo:#0B1020; --indigo-2:#26335A; --on-indigo:#E6E8DF; --on-indigo-soft:#8E99B8;
+  --gold:#D4AA55; --gold-ink:#E0BD72; --gold-bg:#2F2818; --on-gold:#1E1606;
+  --teal:#5C9A84; --teal-ink:#8CC4AE; --teal-bg:#1D3029;
+  --red:#E07A6E; --red-bg:#3A2124; --line:rgba(230,232,223,.14); color-scheme:dark;
+  --c-solo:#35A27C; --c-share:#B8862C; --grid:rgba(230,232,223,.10); --map-bg:#182032;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.6}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--indigo)}
+.mono{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
+h2{font-size:18px}
+h3{font-size:15px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* header */
+.top{background:var(--indigo);color:var(--on-indigo);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.top-in{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1280px;margin:0 auto}
+.brand{font-family:var(--f-display);font-size:19px;font-weight:800;letter-spacing:.04em;display:flex;align-items:baseline;gap:8px}
+.brand small{font-family:var(--f-body);font-size:12px;font-weight:500;color:var(--on-indigo-soft);letter-spacing:.08em}
+.beta{font-family:var(--f-data);font-size:11px;font-weight:400;letter-spacing:.08em;color:var(--on-gold);background:var(--gold);padding:1px 7px;border-radius:4px;align-self:center}
+.guide{background:var(--card);border:1px solid var(--gold);border-radius:8px;padding:14px 16px;margin-bottom:16px;display:grid;gap:8px}
+.guide-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.guide-h h2{font-size:16px;margin-right:auto}
+.guide ol{margin:0;padding-left:0;list-style:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;counter-reset:g}
+@media (max-width:980px){.guide ol{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.guide ol{grid-template-columns:minmax(0,1fr)}}
+.guide li{counter-increment:g;background:var(--paper);border-radius:6px;padding:10px 12px;font-size:13px;display:grid;gap:6px;align-content:start}
+.guide li::before{content:counter(g);font-family:var(--f-data);color:var(--gold-ink);font-size:12px}
+.guide li.done{opacity:.55}
+.guide li .btn{justify-self:start}
+.map-card{padding:12px 14px}
+.map-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}
+.map-h h3{margin-right:auto}
+.vchips{display:flex;flex-wrap:wrap;gap:6px}
+.vchips button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--ink)}
+.vchips button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.map{width:100%;height:auto;display:block;background:var(--map-bg);border-radius:6px}
+.map .pt{fill:var(--ink-soft)}
+.map .pt.base{fill:var(--card);stroke:var(--ink-soft);stroke-width:1.5}
+.map .lbl{font-size:11px;fill:var(--ink-soft);font-family:var(--f-body)}
+.map .lbl.on{fill:var(--ink);font-weight:700;paint-order:stroke;stroke:var(--map-bg);stroke-width:3px;stroke-linejoin:round}
+.map .past{stroke:var(--ink-soft);stroke-opacity:.35;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.map .next{stroke:var(--c-solo);stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.map .stopn{fill:var(--c-solo);stroke:var(--map-bg);stroke-width:2}
+.map .stopt{font-size:10px;fill:#fff;font-family:var(--f-data);text-anchor:middle;dominant-baseline:central}
+.map .req{fill:none;stroke:var(--c-share);stroke-width:2.5}
+.map .reqline{stroke:var(--c-share);stroke-width:2;stroke-dasharray:4 4;fill:none}
+.map-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:var(--ink-soft);margin-top:6px}
+.map-legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:4px}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 400px;align-items:start}
+.split-main{min-width:0}
+.split-phone{position:sticky;top:calc(env(safe-area-inset-top,0px) + 64px);padding:16px 16px 16px 0;max-height:calc(100vh - 64px);overflow-y:auto}
+.phone.embedded{min-height:0;border:10px solid var(--indigo);border-radius:28px;overflow:hidden;background:var(--paper)}
+.phone.embedded .dbody{padding:12px 12px}
+.phone.embedded .dhead{border-radius:0}
+.tour{position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100vw - 32px));background:var(--indigo);color:var(--on-indigo);border-radius:12px;padding:16px 18px;z-index:30;display:grid;gap:10px;box-shadow:0 12px 32px rgba(0,0,0,.3)}
+.tour p{font-size:15px;line-height:1.7}
+.tour-h{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--gold)}
+.tour-bar{flex:1;height:4px;background:var(--indigo-2);border-radius:2px;overflow:hidden}
+.tour-bar i{display:block;height:100%;background:var(--gold)}
+.tour .btn-ghost{color:var(--on-indigo);border-color:var(--on-indigo-soft)}
+.toast.up{bottom:calc(200px + env(safe-area-inset-bottom,0px))}
+@media (prefers-reduced-motion:no-preference){.tour-bar i{transition:width .4s}}
+.presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0 12px}
+@media (max-width:760px){.presets{grid-template-columns:minmax(0,1fr)}}
+.presets button{display:grid;gap:4px;text-align:left;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 14px;cursor:pointer;color:var(--ink)}
+.presets button[aria-checked="true"]{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold);background:var(--gold-bg)}
+.presets b{font-size:14px}
+.presets span{font-size:12px;color:var(--ink-soft);line-height:1.5}
+.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px}
+@media (max-width:860px){.charts{grid-template-columns:minmax(0,1fr)}}
+.chart{width:100%;height:auto;display:block;overflow:visible}
+.chart .gl{stroke:var(--grid);stroke-width:1}
+.chart .ax{font-size:11px;fill:var(--ink-soft);font-family:var(--f-body)}
+.chart .val{font-size:12px;fill:var(--ink);font-family:var(--f-data)}
+.chart .ref{stroke:var(--ink-soft);stroke-width:1}
+.chart .ln{stroke:var(--c-solo);stroke-width:2;fill:none;stroke-linejoin:round;stroke-linecap:round}
+.chart .ar{fill:var(--c-solo);fill-opacity:.1}
+.chart .dot{fill:var(--c-solo);stroke:var(--card);stroke-width:2}
+.chart .b-solo{fill:var(--c-solo)}
+.chart .b-share{fill:var(--c-share)}
+.chart .hit{fill:transparent}
+.chart .hit:hover{fill:var(--grid)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--ink-soft);margin:-4px 0 6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.roles{display:flex;gap:4px;background:var(--indigo-2);padding:3px;border-radius:8px}
+.roles button{background:transparent;border:0;color:var(--on-indigo-soft);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:13px}
+.roles button[aria-pressed="true"]{background:var(--gold);color:var(--on-gold);font-weight:700}
+.conn{margin-left:auto;font-size:12px;color:var(--on-indigo-soft);display:flex;align-items:center;gap:6px}
+.conn i{width:8px;height:8px;border-radius:50%;background:#6DBB9C;display:inline-block}
+.conn.demo i{background:var(--gold)}
+.conn.warn i{background:var(--red)}
+
+.wrap{max-width:1280px;margin:0 auto;padding-block:16px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.subtabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}
+.subtabs button{background:none;border:0;border-bottom:2px solid transparent;padding:8px 14px;cursor:pointer;color:var(--ink-soft);white-space:nowrap}
+.subtabs button[aria-pressed="true"]{color:var(--ink);font-weight:700;border-bottom-color:var(--gold)}
+
+.board{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.board{grid-template-columns:minmax(0,1fr)}}
+.stack{display:grid;gap:16px;min-width:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+.card > h2,.card > h3{margin-bottom:10px}
+.hint{font-size:12px;color:var(--ink-soft)}
+.quote{background:var(--gold-bg);color:var(--gold-ink);font-size:12.5px;padding:8px 10px;border-radius:6px;margin-bottom:12px}
+
+form.f{display:grid;gap:10px}
+.f label{display:grid;gap:4px;font-size:12px;color:var(--ink-soft)}
+.f input:not([type=checkbox]),.f select,.f textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper);font-size:14px;color:var(--ink);min-width:0}
+.f .chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);padding-top:18px}
+.f .chk input{width:18px;height:18px;accent-color:var(--teal)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:420px){.g3{grid-template-columns:1fr 1fr}}
+.riderbox{background:var(--panel);border-radius:6px;padding:8px 10px;font-size:12.5px;display:grid;gap:2px}
+.err{color:var(--red);font-size:12.5px}
+
+.btn{border:1px solid transparent;cursor:pointer;border-radius:6px;padding:10px 14px;font-size:14px;line-height:1.3;background:var(--panel);color:var(--ink)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-gold{background:var(--gold);color:var(--on-gold);font-weight:700}
+.btn-teal{background:var(--teal);color:#fff;font-weight:700}
+.btn-ghost{background:transparent;border-color:var(--line)}
+.btn-red{background:transparent;border-color:var(--red);color:var(--red)}
+.btn-sm{padding:6px 10px;font-size:12.5px}
+.btn-block{width:100%}
+.btn-big{padding:16px;font-size:16px}
+.row-btns{display:flex;flex-wrap:wrap;gap:8px}
+
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;padding:2px 8px;border-radius:999px;background:var(--panel);color:var(--ink-soft);white-space:nowrap}
+.pill.p-new,.pill.p-declined,.pill.p-noshow{background:var(--red-bg);color:var(--red)}
+.pill.p-offered{background:var(--gold-bg);color:var(--gold-ink)}
+.pill.p-accepted,.pill.p-onboard{background:var(--teal-bg);color:var(--teal-ink)}
+.pill.p-shared{background:var(--indigo-2);color:var(--on-indigo)}
+.pill.p-sample{background:transparent;border:1px dashed var(--line)}
+
+.listhead{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}
+.listhead h2{margin-right:auto}
+.listhead input[type=date]{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+.chips{display:flex;gap:6px}
+.chips button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 12px;font-size:12.5px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.reqs{display:grid;gap:10px}
+.req{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:8px;padding:12px 14px;display:grid;gap:6px;min-width:0}
+.req.need{border-left-color:var(--red)}
+.req.wait{border-left-color:var(--gold)}
+.req.ok{border-left-color:var(--teal)}
+.req.fade{opacity:.62}
+.req-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.req-h .t{font-family:var(--f-data);font-size:20px;line-height:1}
+.req-h .who{font-weight:700}
+.req .route{font-size:13.5px}
+.req .meta{font-size:12px;color:var(--ink-soft);display:flex;flex-wrap:wrap;gap:4px 12px}
+.care{background:var(--red-bg);color:var(--red);font-size:12px;padding:5px 9px;border-radius:4px}
+
+.cands{border-top:1px dashed var(--line);margin-top:4px;padding-top:10px;display:grid;gap:8px}
+.cands-h{font-size:12px;color:var(--ink-soft)}
+.cand{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px}
+.cand .rank{font-family:var(--f-data);color:var(--gold-ink);font-size:12px}
+.cand .add{font-family:var(--f-data);font-size:18px;color:var(--ink)}
+.cand .sub{font-size:12px;color:var(--ink-soft)}
+.cand .act{grid-column:1/-1}
+details.ex{font-size:12.5px;color:var(--ink-soft)}
+details.ex li{margin:2px 0}
+
+.vlist{display:grid;gap:8px}
+.vrow{display:flex;align-items:center;gap:10px;font-size:13px}
+.vrow b{flex:1;min-width:0}
+.seats{display:flex;gap:4px}
+.seat{width:16px;height:16px;border-radius:3px;border:1px solid var(--line);background:var(--paper)}
+.seat.on{background:var(--teal);border-color:var(--teal)}
+
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+@media (max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.tile .v{font-family:var(--f-data);font-size:24px;color:var(--ink);font-variant-numeric:tabular-nums}
+.tile .l{font-size:12px;color:var(--ink-soft)}
+.tile .s{font-size:11px;color:var(--ink-soft);opacity:.85;margin-top:2px;line-height:1.5}
+.tile.key .s{color:var(--on-indigo-soft)}
+.kpi-say{font-size:15px;line-height:1.9;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin:0 0 14px}
+.tile.key{background:var(--indigo);border-color:var(--indigo)}
+.tile.key .v{color:var(--gold)}
+.tile.key .l{color:var(--on-indigo-soft)}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11.5px;color:var(--ink-soft);font-weight:500;letter-spacing:.04em}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.formula{font-size:12px;color:var(--ink-soft);background:var(--panel);border-radius:6px;padding:10px 12px;margin-top:12px}
+textarea.csv{width:100%;height:160px;font-family:var(--f-data);font-size:11px;border:1px solid var(--line);border-radius:6px;background:var(--paper);padding:8px}
+
+.empty{color:var(--ink-soft);font-size:13px;text-align:center;padding:24px 8px}
+.notice{background:var(--gold-bg);color:var(--gold-ink);border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px}
+
+/* driver */
+.phone{max-width:440px;margin:0 auto;background:var(--paper);display:flex;flex-direction:column;min-height:calc(100vh - 140px)}
+.dhead{background:var(--indigo);color:var(--on-indigo);padding:14px 18px 18px;border-radius:0 0 14px 14px}
+.dhead .who{font-size:12px;color:var(--on-indigo-soft);display:flex;justify-content:space-between}
+.dhead .who button{background:none;border:0;color:var(--on-indigo-soft);text-decoration:underline;cursor:pointer;font-size:12px;padding:0}
+.dhead .veh{font-family:var(--f-display);font-size:20px;margin-top:2px}
+.toggle{margin-top:10px;display:inline-flex;align-items:center;gap:8px;font-size:13px;background:var(--indigo-2);color:var(--on-indigo);padding:6px 12px;border-radius:14px;border:0;cursor:pointer}
+.toggle i{width:9px;height:9px;border-radius:50%;background:#6DBB9C;display:inline-block}
+.toggle.off i{background:var(--red)}
+.dbody{flex:1;padding:16px 4px;display:grid;gap:12px;align-content:start}
+.alert{background:var(--gold-bg);border:1px solid var(--gold);border-radius:8px;padding:14px;display:grid;gap:4px}
+.alert .tag{font-family:var(--f-data);font-size:11px;color:var(--gold-ink)}
+.alert .time{font-size:22px;font-weight:700}
+.alert.ok{background:var(--teal-bg);border-color:var(--teal)}
+.alert.ok .tag{color:var(--teal-ink)}
+.kv{display:flex;gap:8px;font-size:13.5px}
+.kv .k{color:var(--ink-soft);width:64px;flex-shrink:0}
+.dbtns{display:grid;grid-template-columns:1fr 1.6fr;gap:10px;margin-top:10px}
+.sec{font-family:var(--f-data);font-size:12px;color:var(--ink-soft);margin-top:6px}
+.stop{display:flex;gap:12px;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:8px}
+.stop .n{width:26px;height:26px;border-radius:50%;background:var(--indigo-2);color:var(--on-indigo);font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--f-data)}
+.stop.done{opacity:.5}
+.stop.next{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.stop .t{font-size:14px}
+.stop .s{font-size:12px;color:var(--ink-soft)}
+.big-next{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:8px}
+.big-next .what{font-family:var(--f-data);font-size:12px;color:var(--gold-ink)}
+.big-next .place{font-family:var(--f-display);font-size:22px}
+.phonebox{display:flex;align-items:center;gap:10px;background:var(--panel);border-radius:8px;padding:10px 12px}
+.phonebox .num{font-family:var(--f-data);font-size:18px;flex:1;user-select:all}
+.dtabs{position:sticky;bottom:0;display:flex;border-top:1px solid var(--line);background:var(--card);padding-bottom:env(safe-area-inset-bottom,0px)}
+.dtabs button{flex:1;text-align:center;font-size:12px;padding:12px 0;color:var(--ink-soft);background:none;border:0;border-top:2px solid transparent;cursor:pointer}
+.dtabs button[aria-pressed="true"]{color:var(--ink);font-weight:700;border-top-color:var(--gold)}
+.badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;margin-left:4px}
+.sum{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.picker{display:grid;gap:10px;max-width:440px;margin:0 auto}
+.picker button{text-align:left;display:grid;gap:2px;padding:14px 16px;background:var(--card);border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.picker button b{font-size:16px}
+.picker button span{font-size:12px;color:var(--ink-soft)}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:8px;font-size:13px;max-width:min(92vw,520px);z-index:20;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+@media (prefers-reduced-motion:no-preference){.alert,.toast{animation:rise .25s ease-out}@keyframes rise{from{transform:translateY(6px)}}.toast{animation:none}}
+</style>
+
+<div id="app"></div>
+
+<script>
+/* ============ 基本ユーティリティ ============ */
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const todayStr = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const addDays = (s, n) => { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + n); return todayStr(d); };
+const toMin = s => { if (!s) return null; const [h, m] = s.split(':').map(Number); return h*60 + m; };
+const fromMin = m => { m = Math.round(m); return `${pad(Math.floor(m/60))}:${pad(m%60)}`; };
+const hhmm = iso => { if (!iso) return ''; const d = new Date(iso); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const nowIso = () => new Date().toISOString();
+const newId = p => p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const ls = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+const clone = o => JSON.parse(JSON.stringify(o));
+function deepMerge(a, b) {
+  const o = { ...(a || {}) };
+  for (const k in b) {
+    const v = b[k];
+    o[k] = (v && typeof v === 'object' && !Array.isArray(v) && a && a[k] && typeof a[k] === 'object' && !Array.isArray(a[k])) ? deepMerge(a[k], v) : v;
+  }
+  return o;
+}
+const dateLabel = d => { const t = todayStr(); if (d === t) return '本日'; if (d === addDays(t, 1)) return '明日'; const [, m, dd] = d.split('-'); return `${+m}/${+dd}`; };
+
+/* ============ 設定値(登録情報 > 運用設定 で変更可) ============ */
+const DEF = { operatorPhone: '0000-00-0000', taxiPhone: '', maxConcurrent: 3, detourMaxMin: 15, lateTolMin: 10, boardMin: 3, speedKmh: 25, roadFactor: 1.3 };
+const S = { vehicles: {}, places: {}, riders: {}, requests: {}, settings: {}, surveys: {} };
+const cfg = () => Object.assign({}, DEF, S.settings.main || {});
+
+/* ============ デモ用の架空データ ============
+   売り込み・体験用。地区・車両・利用者はすべて架空(sample: true)。
+   直近2週間の平日の運行を、実際の候補絞り込み(evaluate)で配車して作るので、乗合や稼働率の数字が画面間で食い違わない。
+   「今日」は午前10時ごろの状況(完了・乗車中・確定・返答待ち・未配車)を再現する。 */
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const hashStr = s => [...s].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619), 2166136261);
+const DEMO_NOW = 600; // デモの「今」= 10:00
+/* デモのシナリオ(地域の型)。売り込み先に近いものを選んで見せる。すべて架空 */
+const resident = (h, kinds) => r => {
+  let x = h.rnd();
+  const y = h.rnd(), kind = (kinds.find(([, p]) => (x -= p) < 0) || kinds[0])[0];
+  const to = h.pick(h.byKind(kind));
+  const t = y < 0.6 ? 510 + 5 * Math.floor(h.rnd() * 24) : y < 0.85 ? 630 + 5 * Math.floor(h.rnd() * 30) : 780 + 5 * Math.floor(h.rnd() * 30);
+  const out = [{ from: r.homePlaceId, to, t }];
+  if (h.places[to].kind === 'hospital' && h.rnd() < 0.45) out.push({ from: to, to: r.homePlaceId, t: t + 90 + 5 * Math.floor(h.rnd() * 7) });
+  return out;
+};
+const DEMO_PRESETS = {
+  city: {
+    label: '地方都市', desc: '病院・商業施設が集まる市街地と周辺の住宅地。福祉送迎車・タクシー・市のワゴン・病院バスが参加',
+    places: P => ({
+      p_sumire: P('デイサービス すみれ苑', 'base', 36.300, 138.990), p_taxi: P('乗合タクシー営業所', 'base', 36.310, 139.012),
+      p_city: P('市役所', 'public', 36.304, 139.002),
+      p_minami3: P('南町3丁目', 'area', 36.290, 139.000), p_kita1: P('北町1丁目', 'area', 36.315, 138.995),
+      p_higashi2: P('東町2丁目', 'area', 36.302, 139.020), p_nishi4: P('西町4丁目', 'area', 36.298, 138.982),
+      p_sakura: P('桜ケ丘', 'area', 36.320, 139.010), p_kawabata: P('川端町', 'area', 36.286, 139.015),
+      p_hosp: P('中央病院', 'hospital', 36.305, 139.010), p_clinic: P('南部診療所', 'hospital', 36.285, 139.008),
+      p_dental: P('みどり歯科', 'hospital', 36.312, 139.003),
+      p_shop: P('スーパーみどり', 'shop', 36.298, 139.004), p_mall: P('駅前ショッピングセンター', 'shop', 36.307, 139.006),
+      p_center: P('市民センター', 'public', 36.303, 139.000), p_library: P('図書館', 'public', 36.309, 138.998),
+    }),
+    vehicles: V => ({
+      v_sumire: V('すみれ苑 送迎車', 'デイサービス すみれ苑', 4, false, 'p_sumire', '08:00', '17:00'),
+      v_taxi: V('乗合タクシー 1号', '地元タクシー会社', 4, false, 'p_taxi', '07:00', '19:00'),
+      v_taxi2: V('乗合タクシー 2号', '地元タクシー会社', 4, false, 'p_taxi', '08:00', '18:00'),
+      v_wagon: V('コミュニティワゴン', '市', 8, true, 'p_city', '08:30', '17:30'),
+      v_hbus: V('中央病院 送迎バス', '中央病院', 10, true, 'p_hosp', '08:00', '17:00'),
+    }),
+    riders: R => ({
+      r_s0231: R('0231', '見本 花子', 'みほん はなこ', 'p_minami3', '南町3-12 青い屋根の家', '歩行にやや時間がかかります(杖使用)', false),
+      r_s0056: R('0056', '見本 一郎', 'みほん いちろう', 'p_kita1', '北町1-4 酒店の隣', '', false),
+      r_s0099: R('0099', '見本 トメ', 'みほん とめ', 'p_higashi2', '東町2-8 団地2号棟前', '車椅子を使用', true),
+      r_s0145: R('0145', '見本 次郎', 'みほん じろう', 'p_higashi2', '東町2-21 角の家', '', false),
+      r_s0162: R('0162', '見本 春子', 'みほん はるこ', 'p_nishi4', '西町4-3 生垣のある家', '耳が遠いので大きめの声で', false),
+      r_s0178: R('0178', '見本 和夫', 'みほん かずお', 'p_sakura', '桜ケ丘 集会所前', '', false),
+      r_s0190: R('0190', '見本 京子', 'みほん きょうこ', 'p_kawabata', '川端町 橋のたもと', '乗り降りに手すりが必要', false),
+      r_s0204: R('0204', '見本 茂', 'みほん しげる', 'p_minami3', '南町3-30 白い門', '', false),
+      r_s0215: R('0215', '見本 幸子', 'みほん さちこ', 'p_kita1', '北町1-18 角の家', '', false),
+      r_s0227: R('0227', '見本 正男', 'みほん まさお', 'p_sakura', '桜ケ丘 3号棟前', '車椅子を使用', true),
+      r_s0240: R('0240', '見本 文子', 'みほん ふみこ', 'p_nishi4', '西町4-27 赤いポスト横', '', false),
+      r_s0252: R('0252', '見本 清', 'みほん きよし', 'p_kawabata', '川端町 公民館の向かい', '', false),
+    }),
+    trips: h => resident(h, [['hospital', 0.6], ['shop', 0.25], ['public', 0.15]]),
+    perDay: [13, 7], settings: {},
+    demo: { a: ['r_s0231', 'p_hosp', '10:40'], b: ['r_s0227', 'p_mall', '13:00'], offer: 'v_sumire' },
+  },
+  mountain: {
+    label: '山あいの町', desc: '集落が谷沿いに点在し、診療所は町の中心、大きな病院は隣町。町営バス・社協の送迎車・日中空いているスクールバスが参加',
+    places: P => ({
+      p_m_town: P('役場前', 'public', 36.600, 138.500), p_m_kominkan: P('公民館', 'public', 36.597, 138.494),
+      p_m_clinic: P('町立診療所', 'hospital', 36.602, 138.503), p_m_pref: P('県立病院(隣町)', 'hospital', 36.632, 138.548),
+      p_m_michi: P('道の駅', 'shop', 36.596, 138.512), p_m_ja: P('JAストア', 'shop', 36.604, 138.496),
+      p_m_kami: P('上村', 'area', 36.566, 138.466), p_m_naka: P('中村', 'area', 36.582, 138.478), p_m_shimo: P('下村', 'area', 36.611, 138.524),
+      p_m_oku: P('奥沢', 'area', 36.552, 138.444), p_m_hara: P('原地区', 'area', 36.620, 138.482),
+      p_m_garage: P('町営バス車庫', 'base', 36.599, 138.507), p_m_shakyo: P('社会福祉協議会', 'base', 36.601, 138.498),
+      p_m_school: P('町立小学校', 'base', 36.595, 138.503), p_m_taxi: P('タクシー営業所', 'base', 36.600, 138.510),
+    }),
+    vehicles: V => ({
+      v_m_bus: V('町営バス', '町', 10, true, 'p_m_garage', '07:30', '18:00'),
+      v_m_shakyo: V('社協 福祉送迎車', '社会福祉協議会', 4, true, 'p_m_shakyo', '08:30', '17:00'),
+      v_m_school: V('スクールバス(日中)', '町教育委員会', 14, false, 'p_m_school', '09:00', '14:30'),
+      v_m_taxi: V('町のタクシー', '地元タクシー会社', 4, false, 'p_m_taxi', '07:00', '19:00'),
+      v_m_clinic: V('診療所 送迎車', '町立診療所', 6, false, 'p_m_clinic', '08:30', '16:30'),
+    }),
+    riders: R => ({
+      r_m0101: R('0101', '見本 タケ', 'みほん たけ', 'p_m_oku', '奥沢 一本杉の家', '歩行器を使用', false),
+      r_m0102: R('0102', '見本 源三', 'みほん げんぞう', 'p_m_oku', '奥沢 橋の手前', '', false),
+      r_m0103: R('0103', '見本 ミツ', 'みほん みつ', 'p_m_kami', '上村 バス停横', '車椅子を使用', true),
+      r_m0104: R('0104', '見本 勇', 'みほん いさむ', 'p_m_kami', '上村 神社の下', '', false),
+      r_m0105: R('0105', '見本 ハル', 'みほん はる', 'p_m_naka', '中村 消防団詰所の隣', '耳が遠いので大きめの声で', false),
+      r_m0106: R('0106', '見本 正一', 'みほん しょういち', 'p_m_naka', '中村 赤い屋根', '', false),
+      r_m0107: R('0107', '見本 キヨ', 'みほん きよ', 'p_m_shimo', '下村 集会所前', '', false),
+      r_m0108: R('0108', '見本 実', 'みほん みのる', 'p_m_hara', '原地区 共同墓地の向かい', '車椅子を使用', true),
+      r_m0109: R('0109', '見本 フミ', 'みほん ふみ', 'p_m_hara', '原地区 坂の上', '乗り降りに手すりが必要', false),
+      r_m0110: R('0110', '見本 一夫', 'みほん かずお', 'p_m_shimo', '下村 郵便ポスト前', '', false),
+    }),
+    trips: h => resident(h, [['hospital', 0.6], ['shop', 0.25], ['public', 0.15]]),
+    perDay: [11, 6], settings: { speedKmh: 35, roadFactor: 1.4, detourMaxMin: 20, lateTolMin: 15 },
+    demo: { a: ['r_m0105', 'p_m_clinic', '10:40'], b: ['r_m0103', 'p_m_pref', '13:00'], offer: 'v_m_shakyo' },
+  },
+  tourism: {
+    label: '観光のまち', desc: '駅と温泉街・観光名所を、宿の送迎車や観光タクシーの空き時間でつなぐ。住民の通院・買い物も同じ仕組みで',
+    places: P => ({
+      p_t_station: P('駅前', 'public', 35.000, 135.700), p_t_onsen: P('温泉街', 'tourism', 35.012, 135.715),
+      p_t_castle: P('城跡公園', 'tourism', 35.006, 135.690), p_t_museum: P('美術館', 'tourism', 34.995, 135.708),
+      p_t_port: P('港の朝市', 'shop', 34.990, 135.722), p_t_super: P('スーパー', 'shop', 35.002, 135.696),
+      p_t_hosp: P('総合病院', 'hospital', 35.004, 135.704),
+      p_t_hotel: P('ホテル山月', 'lodging', 35.010, 135.712), p_t_ryokan: P('旅館みなと', 'lodging', 34.992, 135.718),
+      p_t_yama: P('山手町', 'area', 35.015, 135.695), p_t_umi: P('海岸町', 'area', 34.988, 135.705), p_t_naka: P('中町', 'area', 35.001, 135.711),
+      p_t_taxi: P('タクシー営業所', 'base', 34.999, 135.702), p_t_depot: P('循環バス車庫', 'base', 35.003, 135.698),
+    }),
+    vehicles: V => ({
+      v_t_hotel: V('ホテル山月 送迎バス', 'ホテル山月', 12, false, 'p_t_hotel', '08:00', '20:00'),
+      v_t_ryokan: V('旅館みなと 送迎車', '旅館みなと', 7, false, 'p_t_ryokan', '08:00', '19:00'),
+      v_t_taxi: V('観光タクシー 1号', '地元タクシー会社', 4, false, 'p_t_taxi', '07:00', '21:00'),
+      v_t_taxi2: V('観光タクシー 2号', '地元タクシー会社', 4, false, 'p_t_taxi', '08:00', '19:00'),
+      v_t_loop: V('まち循環ワゴン', '市', 9, true, 'p_t_depot', '08:30', '18:00'),
+    }),
+    riders: R => ({
+      r_t0301: { ...R('0301', '見本 旅行者A', 'みほん りょこうしゃ', 'p_t_hotel', 'フロント前', '', false), tourist: true },
+      r_t0302: { ...R('0302', '見本 旅行者B', 'みほん りょこうしゃ', 'p_t_hotel', 'フロント前', '', false), tourist: true },
+      r_t0303: { ...R('0303', '見本 旅行者C', 'みほん りょこうしゃ', 'p_t_hotel', 'フロント前', 'ベビーカーあり', false), tourist: true },
+      r_t0304: { ...R('0304', '見本 旅行者D', 'みほん りょこうしゃ', 'p_t_ryokan', '玄関前', '', false), tourist: true },
+      r_t0305: { ...R('0305', '見本 旅行者E', 'みほん りょこうしゃ', 'p_t_ryokan', '玄関前', '大きな荷物あり', false), tourist: true },
+      r_t0306: { ...R('0306', '見本 旅行者F', 'みほん りょこうしゃ', 'p_t_ryokan', '玄関前', '', false), tourist: true },
+      r_t0401: R('0401', '見本 和子', 'みほん かずこ', 'p_t_yama', '山手町 石段の下', '歩行にやや時間がかかります(杖使用)', false),
+      r_t0402: R('0402', '見本 進', 'みほん すすむ', 'p_t_yama', '山手町 寺の前', '', false),
+      r_t0403: R('0403', '見本 静', 'みほん しず', 'p_t_umi', '海岸町 防波堤の手前', '車椅子を使用', true),
+      r_t0404: R('0404', '見本 浩', 'みほん ひろし', 'p_t_umi', '海岸町 魚屋の隣', '', false),
+      r_t0405: R('0405', '見本 節子', 'みほん せつこ', 'p_t_naka', '中町 銭湯の向かい', '', false),
+      r_t0406: R('0406', '見本 昭', 'みほん あきら', 'p_t_naka', '中町 角の酒屋', '', false),
+    }),
+    trips: h => {
+      const res = resident(h, [['hospital', 0.5], ['shop', 0.35], ['public', 0.15]]);
+      return r => {
+        if (!r.tourist) return res(r);
+        const spot = h.pick([...h.byKind('tourism'), 'p_t_port']), t = 540 + 5 * Math.floor(h.rnd() * 30);
+        const out = [{ from: r.homePlaceId, to: spot, t }];
+        if (h.rnd() < 0.7) out.push({ from: spot, to: h.rnd() < 0.5 ? r.homePlaceId : h.pick(h.byKind('tourism').filter(x => x !== spot)), t: t + 120 + 5 * Math.floor(h.rnd() * 12) });
+        return out;
+      };
+    },
+    perDay: [14, 7], settings: {},
+    demo: { a: ['r_t0301', 'p_t_castle', '10:40'], b: ['r_t0403', 'p_t_hosp', '13:00'], offer: 'v_t_hotel' },
+  },
+};
+const currentPreset = () => (S.settings.main && S.settings.main.demoPreset) || 'city';
+
+function seedData(today, preset = 'city') {
+  // 乱数は日ごとに作り直す: 過去の日は、何日に作っても同じ内容になる(毎日の作り直しで書き込む量が減る)
+  let rnd = mulberry32(hashStr(today + preset));
+  const pick = a => a[Math.floor(rnd() * a.length)];
+  const at = (date, m) => new Date(`${date}T${fromMin(m)}:00`).toISOString();
+  const pr = DEMO_PRESETS[preset] || DEMO_PRESETS.city;
+  const P = (name, kind, lat, lng) => ({ name, kind, lat, lng, sample: true });
+  const places = pr.places(P);
+  const V = (name, owner, capacity, wheelchair, basePlaceId, hoursStart, hoursEnd) => ({ name, owner, capacity, wheelchair, basePlaceId, hoursStart, hoursEnd, available: true, sample: true });
+  const vehicles = pr.vehicles(V);
+  const R = (no, name, kana, homePlaceId, homeDetail, care, wheelchair) => ({ no, name, kana, phone: '000-0000-' + no, homePlaceId, homeDetail, care, wheelchair, consentDate: `${today.slice(0, 4)}-04-01`, sample: true });
+  const riders = pr.riders(R);
+  const saved = { ...S };
+  const withIds = o => Object.fromEntries(Object.entries(o).map(([id, d]) => [id, { ...d, id }]));
+  S.places = withIds(places); S.vehicles = withIds(vehicles); S.riders = withIds(riders); S.settings = { main: { ...DEF, ...pr.settings } }; S.requests = {};
+  const byKind = k => Object.keys(places).filter(id => places[id].kind === k);
+  const genTrips = pr.trips({ rnd: () => rnd(), pick, byKind, places });
+  const riderIds = Object.keys(riders), surveys = {};
+  const REASONS = ['時間が合わない', '車両の都合', 'その他'], COMMENTS = ['', '', '', '運転手さんが親切だった', '玄関まで来てくれて助かる', 'もう少し早い時間にも乗りたい', '乗合でも気にならない', '帰りの便も使いたい'];
+  const days = [];
+  for (let k = 14; k >= 0; k--) { const d = addDays(today, -k), wd = new Date(d + 'T12:00:00').getDay(); if (k === 0 || (wd !== 0 && wd !== 6)) days.push(d); }
+  for (const date of days) {
+    rnd = mulberry32(hashStr(date + preset));
+    const isToday = date === today, trips = [];
+    // 通院は朝に集中、買い物・公共施設は昼前後(高齢者の移動の傾向を模した架空の分布)。観光のまちは観光客の周遊も
+    const n = isToday ? pr.perDay[0] + 3 : pr.perDay[0] + Math.floor(rnd() * pr.perDay[1]);
+    for (let i = 0; i < n; i++) { const rid = pick(riderIds); genTrips(riders[rid]).forEach(x => trips.push({ rid, ...x })); }
+    trips.filter(x => x.t <= 960).sort(() => rnd() - 0.5).forEach((x, i) => {
+      const r = riders[x.rid], id = `q_${date.replace(/-/g, '')}_${pad(i)}`;
+      const created = at(addDays(date, -1), 540 + 5 * Math.floor(rnd() * 100));
+      const req = {
+        id, riderId: x.rid, riderNo: r.no, date, pickupTime: fromMin(x.t), pickupPlaceId: x.from, pickupLabel: places[x.from].name,
+        pickupDetail: x.from === r.homePlaceId ? r.homeDetail : '正面玄関', destPlaceId: x.to, destLabel: places[x.to].name,
+        party: rnd() < 0.1 ? 2 : 1, care: r.care, wheelchair: r.wheelchair, status: 'new', vehicleId: null, offers: [], ev: {},
+        riderNotified: false, createdAt: created, sample: true, log: [{ at: created, by: null, act: '電話受付' }],
+      };
+      S.requests[id] = req;
+      const c = candidates(req);
+      if (!c.ok.length) { req.status = 'taxi'; req.log.push({ at: created, by: null, act: 'タクシー手配' }); return; }
+      let ch = c.ok[0];
+      if (rnd() < 0.12 && c.ok.length > 1) {
+        req.offers.push({ vehicleId: ch.v.id, at: created, result: 'declined', reason: pick(REASONS) });
+        req.log.push({ at: created, by: null, act: `依頼: ${ch.v.name}` }, { at: created, by: null, act: `辞退: ${ch.v.name}` });
+        ch = c.ok[1];
+      }
+      req.offers.push({ vehicleId: ch.v.id, at: created, result: 'accepted' });
+      req.log.push({ at: created, by: null, act: `依頼: ${ch.v.name}` }, { at: created, by: null, act: '配車確定' });
+      Object.assign(req, { status: 'accepted', vehicleId: ch.v.id, estAddMin: ch.added, estDropMin: ch.dropAt, shared: ch.shared, riderNotified: true, ev: { acceptedAt: created } });
+    });
+    // 各車両の停車順を走らせて、実際のお迎え・降車時刻を決める
+    for (const v of Object.values(S.vehicles)) {
+      const route = routeOf(v, date), sim = simulate(route, route.seq);
+      for (const id in sim.info) {
+        const r = S.requests[id], i = sim.info[id];
+        r.estDropMin = i.drop;
+        const fin = !isToday || i.drop <= DEMO_NOW, riding = isToday && i.pick <= DEMO_NOW && i.drop > DEMO_NOW;
+        if (fin || riding) Object.assign(r.ev, { arrivedAt: at(date, i.pick - 1), boardedAt: at(date, i.pick) });
+        if (fin) {
+          r.ev.droppedAt = at(date, i.drop); r.status = 'done'; r.log.push({ at: r.ev.droppedAt, by: null, act: '完了' });
+          if (!isToday && rnd() < 0.4) {
+            const s = rnd();
+            surveys[id] = { requestId: id, riderId: r.riderId, date, satisfaction: s < 0.45 ? 5 : s < 0.85 ? 4 : s < 0.97 ? 3 : 2,
+              easier: rnd() < 0.72 ? 'yes' : rnd() < 0.85 ? 'same' : 'no', comment: pick(COMMENTS), at: at(date, i.drop + 120), sample: true };
+          }
+        } else if (riding) { r.status = 'onboard'; r.log.push({ at: r.ev.boardedAt, by: null, act: '乗車中' }); }
+      }
+    }
+  }
+  // 導入前の座席稼働率(架空): 比較機能を見せるための値。デモの過去分の稼働率の約3/4とする
+  const hist = kpi(Object.values(S.requests).filter(r => r.date !== today)).perV;
+  for (const vid in vehicles) { const p = hist[vid]; vehicles[vid].baselineOcc = p && p.cap ? Math.round(p.used / p.cap * 750) / 10 : 10; }
+  // 今日: 午後の1件を「すみれ苑の返答待ち」に、新しい電話を2件「未配車」にする(体験の入口)
+  const todays = Object.values(S.requests).filter(r => r.date === today);
+  const later = todays.filter(r => r.status === 'accepted' && r.vehicleId === pr.demo.offer && toMin(r.pickupTime) >= 660);
+  const off = later[0] || todays.find(r => r.status === 'accepted' && toMin(r.pickupTime) >= 660);
+  if (off) {
+    off.status = 'offered'; off.riderNotified = false; off.ev = {};
+    off.offers = [...off.offers.slice(0, -1), { vehicleId: off.vehicleId, at: at(today, 585), result: 'pending' }];
+    off.log = off.log.filter(l => l.act !== '配車確定');
+  }
+  const nw = (id, rid, to, t, extra) => {
+    const r = riders[rid];
+    S.requests[id] = { id, riderId: rid, riderNo: r.no, date: today, pickupTime: t, pickupPlaceId: r.homePlaceId, pickupLabel: places[r.homePlaceId].name,
+      pickupDetail: r.homeDetail, destPlaceId: to, destLabel: places[to].name, party: 1, care: r.care, wheelchair: r.wheelchair,
+      status: 'new', vehicleId: null, offers: [], ev: {}, riderNotified: false, createdAt: at(today, 590), sample: true,
+      log: [{ at: at(today, 590), by: null, act: '電話受付' }], ...extra };
+  };
+  nw('q_demo_a', ...pr.demo.a);
+  nw('q_demo_b', ...pr.demo.b);
+  const strip = o => Object.fromEntries(Object.entries(o).map(([id, d]) => { const { id: _, ...rest } = d; return [id, rest]; }));
+  const out = { places, vehicles, riders, requests: strip(S.requests), surveys, settings: { main: { ...DEF, ...pr.settings, operatorPhone: '0000-00-0000', taxiPhone: '0000-11-1111', demoPreset: preset } } };
+  Object.assign(S, saved);
+  return out;
+}
+
+/* ============ 所要時間の概算 ============ */
+function travelMin(a, b) {
+  const A = S.places[a], B = S.places[b];
+  if (!A || !B || a === b) return 0;
+  const rad = x => x * Math.PI / 180, c = cfg();
+  const h = Math.sin(rad(B.lat - A.lat) / 2) ** 2 + Math.cos(rad(A.lat)) * Math.cos(rad(B.lat)) * Math.sin(rad(B.lng - A.lng) / 2) ** 2;
+  const km = 2 * 6371 * Math.asin(Math.sqrt(h)) * c.roadFactor;
+  return Math.max(1, Math.ceil(km / c.speedKmh * 60));
+}
+
+/* ============ 候補車両の絞り込み ============
+   車両のその日の未完了の停車順(お迎え・降車)に、新しいお迎えと降車を「どの順番で挟むか」を全通り試し、
+   全員の制約(お迎えの遅れ・同乗による迂回・座席数・同時対応件数・運行時間)を満たす中で最も負担の少ない順を選ぶ。
+   AIは絞り込みのみ。最終確定はオペレーターが行う(提案書 §2・§11)。 */
+const ACTIVE = ['offered', 'accepted', 'onboard'];
+const isoToMin = iso => { const d = new Date(iso); return d.getHours() * 60 + d.getMinutes(); };
+/* 車両の出発点(最後に完了した乗降の場所と時刻)と、未完了の停車の並び */
+function routeOf(v, date, skipId) {
+  const c = cfg();
+  const trips = Object.values(S.requests).filter(r => r.vehicleId === v.id && r.date === date && r.id !== skipId);
+  let start = { t: toMin(v.hoursStart || '08:00'), place: v.basePlaceId, load: 0, conc: 0 };
+  const events = [];
+  trips.forEach(r => {
+    if (r.status === 'done' && r.ev?.droppedAt) events.push({ t: isoToMin(r.ev.droppedAt), place: r.destPlaceId });
+    if (r.status === 'onboard' && r.ev?.boardedAt) events.push({ t: isoToMin(r.ev.boardedAt), place: r.pickupPlaceId });
+  });
+  const last = events.sort((a, b) => a.t - b.t).pop();
+  if (last) start = { ...start, t: last.t, place: last.place };
+  const fixed = {}, seq = [];
+  trips.filter(r => ACTIVE.includes(r.status)).forEach(r => {
+    const party = +r.party || 1, direct = travelMin(r.pickupPlaceId, r.destPlaceId);
+    const reqT = toMin(r.pickupTime), dropT = r.estDropMin ?? reqT + c.boardMin + direct;
+    if (r.status === 'onboard') {
+      start.load += party; start.conc++;
+      fixed[r.id] = { pick: r.ev?.boardedAt ? isoToMin(r.ev.boardedAt) : reqT, direct };
+    } else seq.push({ id: r.id, kind: 'pick', place: r.pickupPlaceId, reqT, party, direct, ord: reqT });
+    seq.push({ id: r.id, kind: 'drop', place: r.destPlaceId, party, ord: dropT });
+  });
+  seq.sort((a, b) => a.ord - b.ord || (a.kind === 'drop' ? -1 : 1));
+  return { start, seq, fixed };
+}
+/* 停車順を走らせて、各利用者のお迎え時刻・降車時刻・遅れ・迂回を求める */
+function simulate(route, seq) {
+  const c = cfg(), { start, fixed } = route;
+  let t = start.t, at = start.place, load = start.load, conc = start.conc, travel = 0, maxLoad = load, maxConc = conc;
+  const info = {}, trace = []; // trace: 各停車のあとの乗車人数と同時対応件数
+  for (const id in fixed) info[id] = { pick: fixed[id].pick, direct: fixed[id].direct, late: 0 };
+  for (const s of seq) {
+    const d = travelMin(at, s.place); travel += d; t += d; at = s.place;
+    const i = info[s.id] = info[s.id] || { late: 0 };
+    if (s.kind === 'pick') { t = Math.max(t, s.reqT); i.pick = t; i.late = t - s.reqT; i.direct = s.direct; t += c.boardMin; load += s.party; conc++; }
+    else { i.drop = t; i.extra = Math.max(0, t - i.pick - c.boardMin - i.direct); load -= s.party; conc--; }
+    maxLoad = Math.max(maxLoad, load); maxConc = Math.max(maxConc, conc);
+    trace.push({ id: s.id, kind: s.kind, load, conc });
+  }
+  return { travel, end: t, info, maxLoad, maxConc, trace };
+}
+function evaluate(v, req) {
+  const c = cfg(), pre = [];
+  if ((req.offers || []).some(o => o.vehicleId === v.id && o.result === 'declined')) pre.push('この依頼を辞退済み');
+  if (v.available === false) pre.push('受付を停止中');
+  if (req.wheelchair && !v.wheelchair) pre.push('車椅子に非対応');
+  if (req.party > v.capacity) pre.push('定員を超える');
+  const hs = toMin(v.hoursStart || '08:00'), he = toMin(v.hoursEnd || '18:00'), P = toMin(req.pickupTime);
+  if (P < hs || P > he) pre.push(`運行時間外(${v.hoursStart}〜${v.hoursEnd})`);
+  if (pre.length) return { v, ok: false, reasons: pre, score: Infinity };
+  const route = routeOf(v, req.date, req.id), base = simulate(route, route.seq);
+  const me = { id: '__new', party: +req.party || 1, direct: travelMin(req.pickupPlaceId, req.destPlaceId) };
+  const pickS = { ...me, kind: 'pick', place: req.pickupPlaceId, reqT: P }, dropS = { ...me, kind: 'drop', place: req.destPlaceId };
+  const n = route.seq.length;
+  let best = null, nearest = null;
+  for (let i = 0; i <= n; i++) {
+    if (route.seq.slice(i).some(s => s.kind === 'pick' && s.reqT < P - 60)) continue; // 1時間以上前の予定より前には入れない
+    for (let j = i; j <= n; j++) {
+      const seq = [...route.seq.slice(0, i), pickS, ...route.seq.slice(i, j), dropS, ...route.seq.slice(j)];
+      const sim = simulate(route, seq), mine = sim.info.__new, why = [];
+      if (mine.late > c.lateTolMin) why.push(`お迎えが${mine.late}分遅れる見込み`);
+      if (mine.extra > c.detourMaxMin) why.push(`本人の迂回が上限超え(+${mine.extra}分)`);
+      // 座席と同時対応は、この方が乗っている区間(お迎え〜降車の直前)で数える
+      const during = sim.trace.slice(i, j + 1);
+      if (Math.max(...during.map(x => x.load)) > v.capacity) why.push('座席が足りない');
+      if (Math.max(...during.map(x => x.conc)) > c.maxConcurrent) why.push(`同時対応の上限(${c.maxConcurrent}件)`);
+      if (mine.drop > he) why.push(`運行時間外(${v.hoursEnd}まで)`);
+      let delay = 0, shared = false;
+      for (const id in base.info) {
+        const a = base.info[id], b = sim.info[id];
+        if (b.late > Math.max(c.lateTolMin, a.late)) why.push('他の方のお迎えが遅れる');
+        if ((b.extra || 0) > Math.max(c.detourMaxMin, a.extra || 0)) why.push(`同乗者の迂回が上限超え(+${b.extra}分)`);
+        if (b.drop != null && a.drop != null) delay = Math.max(delay, b.drop - a.drop);
+        if (b.pick < mine.drop && (b.drop ?? Infinity) > mine.pick) shared = true;
+      }
+      const added = sim.travel - base.travel;
+      const score = added + mine.late * 2 + delay * 0.5 + mine.extra * 0.5 - (shared ? 2 : 0);
+      const r = { v, ok: !why.length, reasons: [...new Set(why)], added, pickAt: mine.pick, dropAt: mine.drop, shared, delay, score };
+      if (r.ok && (!best || score < best.score)) best = r;
+      if (!r.ok && (!nearest || r.reasons.length < nearest.reasons.length || (r.reasons.length === nearest.reasons.length && score < nearest.score))) nearest = r;
+    }
+  }
+  return best || nearest || { v, ok: false, reasons: ['ルートに入れられない'], score: Infinity };
+}
+function candidates(req) {
+  const all = Object.values(S.vehicles).map(v => evaluate(v, req));
+  return { ok: all.filter(x => x.ok).sort((a, b) => a.score - b.score), ng: all.filter(x => !x.ok) };
+}
+
+/* ============ データ保存層(共有DB / デモ用メモリ) ============ */
+const COLLS = ['vehicles', 'places', 'requests', 'settings', 'riders', 'surveys'];
+function memStore(seed) {
+  const data = {}, subs = {};
+  COLLS.forEach(c => data[c] = clone(seed[c] || {}));
+  const emit = c => (subs[c] || []).forEach(f => f(clone(data[c])));
+  return {
+    mode: 'demo',
+    watch(c, cb) { (subs[c] = subs[c] || []).push(cb); setTimeout(() => cb(clone(data[c])), 0); },
+    async set(c, id, d) { data[c][id] = clone(d); emit(c); },
+    async update(c, id, p) { if (!data[c][id]) throw { code: 'invalid_argument', message: 'not found' }; data[c][id] = deepMerge(data[c][id], clone(p)); emit(c); },
+    async del(c, id) { delete data[c][id]; emit(c); },
+  };
+}
+function dbStore(db) {
+  return {
+    mode: 'live',
+    watch(c, cb, err) {
+      return db.collection(c).onSnapshot(s => { const o = {}; s.docs.forEach(d => o[d.id] = clone(d.data())); cb(o, s.metadata); }, e => err && err(e));
+    },
+    set: (c, id, d) => db.doc(c + '/' + id).set(d),
+    update: (c, id, p) => db.doc(c + '/' + id).update(p),
+    del: (c, id) => db.doc(c + '/' + id).delete(),
+  };
+}
+let store = null;
+const isTransient = e => !e || !e.code || e.code === 'unavailable' || e.code === 'resource_exhausted';
+const errMsg = e => ({
+  invalid_argument: 'この操作を行う権限がないか、入力に問題があります。',
+  quota_exceeded: 'データの保存容量が上限に達しました。古い記録の整理が必要です。',
+  revoked: 'このページへのアクセス権が変更されました。',
+}[e && e.code] || '保存できませんでした。時間をおいてもう一度お試しください。');
+async function withRetry(fn) {
+  try { return await fn(); }
+  catch (e) { if (e && e.code === 'unavailable') { await new Promise(r => setTimeout(r, 400 + Math.random() * 600)); return fn(); } throw e; }
+}
+
+/* 通信が不安定な地域向け: 運転手の記録は端末に保持し、つながり次第送信(提案書 §11) */
+let queue = ls.get('meguru.queue', []);
+/* 操作の記録: 依頼の状態が変わるたびに「いつ・誰が・何を」を依頼に残す(誰 = 閲覧者のid。名前は表示時に解決) */
+let ME = null;
+function describe(p, old) {
+  if (p.status === 'offered') return `依頼: ${vName(p.vehicleId)}`;
+  if (p.status === 'declined') { const o = (p.offers || []).slice(-1)[0]; return `辞退${o?.reason ? '(' + o.reason + ')' : ''}: ${vName(old?.vehicleId)}`; }
+  if (p.status === 'new' && old?.status === 'offered') return '依頼を取り下げ';
+  if (p.status) return (STATUS[p.status] || [p.status])[0];
+  if (p.ev?.arrivedAt) return '到着';
+  if (p.ev?.notifiedAt) return '利用者へ確定連絡';
+  if (p.noshowChecked) return '不在を利用者に確認';
+  return '';
+}
+const logEntry = act => ({ at: nowIso(), by: ME, act });
+async function patch(c, id, p, { offline = false } = {}) {
+  if (c === 'requests' && !p.log) { const act = describe(p, S[c][id]); if (act) p = { ...p, log: [...(S[c][id]?.log || []), logEntry(act)] }; }
+  S[c][id] = deepMerge(S[c][id], p); render();
+  try { await withRetry(() => store.update(c, id, p)); return true; }
+  catch (e) {
+    if (offline && isTransient(e)) {
+      queue.push({ c, id, p }); ls.set('meguru.queue', queue);
+      toast('通信が不安定なため、記録を端末に保存しました。つながり次第送信します。');
+      return true;
+    }
+    toast(errMsg(e)); return false;
+  }
+}
+async function put(c, id, d) {
+  try { await withRetry(() => store.set(c, id, d)); return true; } catch (e) { toast(errMsg(e)); return false; }
+}
+async function remove(c, id) {
+  try { await withRetry(() => store.del(c, id)); return true; } catch (e) { toast(errMsg(e)); return false; }
+}
+let flushing = false;
+async function flushQueue() {
+  if (flushing || !queue.length || !store) return;
+  flushing = true;
+  while (queue.length) {
+    const q = queue[0];
+    try { await store.update(q.c, q.id, q.p); queue.shift(); ls.set('meguru.queue', queue); }
+    catch (e) { if (isTransient(e)) break; queue.shift(); ls.set('meguru.queue', queue); toast(errMsg(e)); }
+  }
+  flushing = false; scheduleRender();
+}
+setInterval(flushQueue, 15000);
+window.addEventListener('online', flushQueue);
+
+/* ============ 画面状態 ============ */
+const blankForm = () => ({ riderId: '', date: todayStr(), time: '', pickupPlaceId: '', pickupDetail: '', destPlaceId: '', party: 1, care: '', wheelchair: false, repeat: 0, err: '' });
+const UI = {
+  role: ls.get('meguru.role', null), opTab: 'board', drvTab: 'req', date: todayStr(), filter: 'need',
+  sel: null, form: blankForm(), edit: null, mtab: 'riders', period: '7d', csv: '',
+  myVehicle: ls.get('meguru.vehicle', null), split: ls.get('meguru.split', false), tour: null, declining: null, confirm: null, toast: '', cached: false,
+};
+let MODE = 'connecting', CAN = { operator: false, write: true };
+const loaded = new Set();
+
+let toastTimer;
+function toast(msg) { UI.toast = msg; clearTimeout(toastTimer); toastTimer = setTimeout(() => { UI.toast = ''; render(); }, 5000); render(); }
+
+/* ============ 画面: 共通 ============ */
+const STATUS = {
+  new: ['未配車', 'need'], offered: ['返答待ち', 'wait'], declined: ['辞退あり・再配車', 'need'],
+  accepted: ['配車確定', 'ok'], onboard: ['乗車中', 'ok'], done: ['完了', 'fade'],
+  noshow: ['不在・乗車なし', 'need'], taxi: ['タクシー手配', 'fade'], cancelled: ['取消', 'fade'],
+};
+const needsAction = r => r.status === 'new' || r.status === 'declined' || (r.status === 'accepted' && !r.riderNotified) || (r.status === 'noshow' && !r.noshowChecked);
+const byTime = (a, b) => (a.date + a.pickupTime).localeCompare(b.date + b.pickupTime);
+const vName = id => S.vehicles[id]?.name || '(削除された車両)';
+const pName = id => S.places[id]?.name || '';
+const KIND = { area: '町丁目・自宅周辺', hospital: '医療機関', shop: '買い物', public: '公共施設', tourism: '観光地', lodging: '宿泊施設', base: '車両の拠点' };
+
+function header() {
+  const n = queue.length;
+  let conn;
+  if (MODE === 'connecting') conn = `<span class="conn"><i></i>接続しています…</span>`;
+  else if (SANDBOX) conn = `<span class="conn demo"><i></i>体験中(この画面だけ・共有データは変わりません)<button class="btn btn-ghost btn-sm" style="color:inherit;border-color:currentColor" data-act="sandbox-end">体験を終える</button></span>`;
+  else if (MODE === 'demo') conn = `<span class="conn demo"><i></i>デモモード(この画面だけ・保存されません)</span>`;
+  else if (n) conn = `<span class="conn warn"><i></i>未送信の記録 ${n}件</span>`;
+  else conn = `<span class="conn"><i></i>${UI.cached ? '同期しています' : '共有データに接続中'}</span>`;
+  const roles = CAN.operator
+    ? `<nav class="roles" aria-label="画面の切り替え"><button data-act="role" data-v="operator" aria-pressed="${UI.role === 'operator'}">オペレーター</button><button data-act="role" data-v="driver" aria-pressed="${UI.role === 'driver'}">運転手</button></nav>`
+    : '';
+  return `<header class="top"><div class="top-in"><div class="brand">巡 MEGURU <small>配車システム</small><span class="beta">ベータ版</span></div>${roles}${conn}</div></header>`;
+}
+const pill = (r) => { const [l] = STATUS[r.status] || [r.status]; return `<span class="pill p-${r.status}">${l}</span>`; };
+
+/* ============ 画面: オペレーター ============ */
+function operatorView() {
+  const tabs = [['board', '受付・配車'], ['kpi', '実績・効果検証'], ['master', '登録情報']];
+  const body = UI.opTab === 'kpi' ? kpiView() : UI.opTab === 'master' ? masterView() : boardView();
+  return `<div class="wrap">
+    ${demoNotice()}
+    ${UI.opTab === 'board' ? demoGuide() : ''}
+    <div class="subtabs" role="tablist">${tabs.map(([k, l]) => `<button data-act="optab" data-v="${k}" aria-pressed="${UI.opTab === k}">${l}</button>`).join('')}
+      <button data-act="tour-start" style="margin-left:auto">自動デモを見る</button>
+      ${isWide() ? `<button data-act="split" aria-pressed="${!!UI.split}">${UI.split ? '運転手の画面を隠す' : '運転手の画面を並べて表示'}</button>` : ''}</div>
+    ${body}</div>`;
+}
+/* ---- 体験用の案内(売り込み・デモ向け) ---- */
+const hasDemo = () => Object.values(S.requests).some(r => r.sample) || Object.values(S.vehicles).some(v => v.sample);
+function demoNotice() {
+  const scen = hasDemo() ? ` シナリオ: <b>${esc(DEMO_PRESETS[currentPreset()].label)}</b>。` : '';
+  if (MODE === 'demo' || SANDBOX) return `<div class="notice">体験版です。表示しているのは<b>架空の地区・車両・利用者</b>のデモデータで、実際の効果を示すものではありません。操作はこの画面の中だけで行われ、再読み込みすると元に戻ります。${scen}${CAN.operator ? ' <button class="btn btn-ghost btn-sm" data-act="optab" data-v="master">シナリオを変える</button>' : ''}</div>`;
+  if (!hasDemo()) return '';
+  const needToday = !Object.values(S.requests).some(r => r.sample && r.date === todayStr());
+  const btn = UI.demoProgress ? ` <span>${esc(UI.demoProgress)}</span>` : ` <button class="btn btn-gold btn-sm" data-act="demo-reset">今日のデモを用意する</button>`;
+  return `<div class="notice">表示しているのは<b>架空のデモデータ</b>です(実際の効果を示すものではありません)。${scen}${needToday && CAN.operator ? ` 今日の日付のデモがまだありません。直近2週間の運行と、今日10時ごろの状況を作ります(前日に用意していれば数秒、初回は十数秒)。${btn}` : ''}</div>`;
+}
+const GUIDE = [
+  ['電話受付', () => { const a = S.requests.q_demo_a; return `「未配車」の依頼${a ? `(${a.pickupTime} ${a.pickupLabel}→${a.destLabel})` : ''}の「候補を探す」を押します。`; }, 'guide-find'],
+  ['候補を比べる', '追加時間・乗合・お迎え時刻を比べ、「この車両に依頼する」を押します。対象外の車両には理由が出ます。', null],
+  ['運転手の画面', '画面上部の「運転手」に切り替え、依頼した車両を選んで「承諾する」を押します。', 'guide-driver'],
+  ['乗車を記録', '「走行中」タブで到着・乗車・降車を記録します。電波がなくても端末に保存されます。', null],
+  ['効果を見る', '「実績・効果検証」で、座席稼働率・乗合・満足度を確認します(直近7日)。', 'guide-kpi'],
+];
+function demoGuide() {
+  if (UI.tour) return '';
+  if (!hasDemo() || ls.get('meguru.guideHidden', false)) return hasDemo() ? `<p style="margin:-4px 0 12px"><button class="btn btn-ghost btn-sm" data-act="guide-show">デモの進め方を表示</button></p>` : '';
+  return `<section class="guide" aria-label="デモの進め方"><div class="guide-h"><h2>デモの進め方(約3分)</h2><span class="hint">MEGURU は、電話で受けた移動の依頼を、地域の送迎車やタクシーの空いている席につなぐ仕組みです。この画面は受付担当(オペレーター)の画面で、「運転手」に切り替えると運転手のスマホ画面になります。</span><button class="btn btn-gold btn-sm" data-act="tour-start">自動で見る(約1分)</button><button class="btn btn-ghost btn-sm" data-act="guide-hide">閉じる</button></div>
+    <ol>${GUIDE.map(([t, d, act]) => `<li><b>${t}</b><span class="hint">${esc(typeof d === 'function' ? d() : d)}</span>${act ? `<button class="btn btn-ghost btn-sm" data-act="${act}">${t === '電話受付' ? 'この依頼を開く' : t === '運転手の画面' ? '運転手の画面へ' : '実績を開く'}</button>` : ''}</li>`).join('')}</ol></section>`;
+}
+function boardView() {
+  return `<div class="board"><div class="stack">${receptionForm()}${vehiclePanel()}</div><div class="stack">${mapCard()}${requestList()}</div></div>`;
+}
+const sortedRiders = () => Object.values(S.riders).sort((a, b) => (a.kana || a.name || '').localeCompare(b.kana || b.name || '', 'ja'));
+const placeOpts = (sel, filter) => Object.values(S.places).filter(filter || (() => true))
+  .sort((a, b) => (a.kind + a.name).localeCompare(b.kind + b.name, 'ja'))
+  .map(p => `<option value="${esc(p.id)}" ${p.id === sel ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
+
+function receptionForm() {
+  const f = UI.form, all = sortedRiders();
+  const q = (f.q || '').replace(/[\s-]/g, '');
+  const riders = q ? all.filter(x => [x.no, x.name, x.kana, x.phone].some(s => String(s || '').replace(/[\s-]/g, '').includes(q)) || x.id === f.riderId) : all;
+  if (!loaded.has('riders')) return `<div class="card"><h2>電話受付</h2><p class="empty">読み込んでいます…</p></div>`;
+  if (!all.length) return `<div class="card"><h2>電話受付</h2><p class="empty">利用者が登録されていません。<br>「登録情報」タブで利用者を登録すると、ここで受付できます。</p></div>`;
+  const r = S.riders[f.riderId];
+  const last = r ? Object.values(S.requests).filter(x => x.riderId === r.id && x.status !== 'cancelled').sort(byTime).pop() : null;
+  return `<div class="card"><h2>電話受付</h2>
+    <div class="quote">「いつ・どこへ行きたいか」を伺います。例:「明日の10時に、中央病院へ行きたいのですが。」</div>
+    <form class="f" id="recv" data-form="recv" novalidate>
+      <label>利用者を探す<input id="f-rsearch" data-bind="q" data-live="1" value="${esc(f.q || '')}" placeholder="番号・名前・ふりがな・電話番号" autocomplete="off"></label>
+      <label>利用者${q ? `(${riders.length}件)` : ''}
+        <select id="f-rider" data-bind="riderId"><option value="">選んでください</option>
+        ${riders.map(x => `<option value="${esc(x.id)}" ${x.id === f.riderId ? 'selected' : ''}>${esc(x.no)} ${esc(x.name)}${x.kana ? '(' + esc(x.kana) + ')' : ''}</option>`).join('')}</select></label>
+      ${r ? `<div class="riderbox"><span>折り返し先 <b class="mono">${esc(r.phone)}</b></span>${r.care ? `<span>配慮: ${esc(r.care)}</span>` : ''}<span class="hint">同意取得日 ${esc(r.consentDate || '未記録')}</span>
+        ${last ? `<button type="button" class="btn btn-ghost btn-sm" data-act="copy-last" data-id="${esc(last.id)}">前回と同じ内容にする(${esc(last.pickupTime)} ${esc(last.pickupLabel)}→${esc(last.destLabel)})</button>` : ''}</div>` : ''}
+      <div class="g2">
+        <label>日付<input type="date" id="f-date" data-bind="date" value="${esc(f.date)}"></label>
+        <label>お迎え希望時刻<input type="time" id="f-time" data-bind="time" step="300" value="${esc(f.time)}"></label>
+      </div>
+      <div class="g2">
+        <label>乗車地<select id="f-pick" data-bind="pickupPlaceId"><option value="">選択</option>${placeOpts(f.pickupPlaceId)}</select></label>
+        <label>行き先<select id="f-dest" data-bind="destPlaceId"><option value="">選択</option>${placeOpts(f.destPlaceId)}</select></label>
+      </div>
+      <label>乗車地の目印・住所<input id="f-pdet" data-bind="pickupDetail" value="${esc(f.pickupDetail)}" placeholder="例: 青い屋根の家、正面玄関"></label>
+      <div class="g2">
+        <label>人数<select id="f-party" data-bind="party">${[1, 2, 3, 4].map(n => `<option ${+f.party === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+        <label class="chk"><input type="checkbox" id="f-wc" data-bind="wheelchair" ${f.wheelchair ? 'checked' : ''}>車椅子で乗車</label>
+      </div>
+      <label>配慮事項(運転手に伝わります)<input id="f-care" data-bind="care" value="${esc(f.care)}"></label>
+      <label>くり返し(定期の通院など)<select id="f-repeat" data-bind="repeat">${[0, 1, 2, 3, 4, 6, 8, 12].map(n => `<option value="${n}" ${+f.repeat === n ? 'selected' : ''}>${n ? `毎週同じ曜日・時刻で、あと${n}回` : 'くり返さない'}</option>`).join('')}</select></label>
+      ${f.err ? `<div class="err" role="alert">${esc(f.err)}</div>` : ''}
+      <button class="btn btn-gold" type="submit" ${CAN.write ? '' : 'disabled'}>受付して候補を探す</button>
+    </form></div>`;
+}
+function vehiclePanel() {
+  const vs = Object.values(S.vehicles).sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+  const today = todayStr();
+  return `<div class="card"><h3>参加車両の状況(本日)</h3>${vs.length ? `<div class="vlist">${vs.map(v => {
+    const trips = Object.values(S.requests).filter(r => r.vehicleId === v.id && r.date === today && ['accepted', 'onboard', 'done'].includes(r.status));
+    const on = trips.filter(r => r.status === 'onboard').reduce((s, r) => s + (+r.party || 1), 0);
+    return `<div class="vrow"><b>${esc(v.name)}</b><span class="pill ${v.available === false ? 'p-new' : 'p-accepted'}">${v.available === false ? '停止中' : '受付中'}</span>
+      <span class="hint mono">${trips.length}件</span>
+      <span class="seats" title="乗車中 ${on}/${v.capacity}名">${Array.from({ length: Math.min(v.capacity, 10) }, (_, i) => `<span class="seat ${i < on ? 'on' : ''}"></span>`).join('')}</span></div>`;
+  }).join('')}</div>` : `<p class="empty">車両が登録されていません。</p>`}</div>`;
+}
+function requestList() {
+  const list = Object.values(S.requests).filter(r => r.date === UI.date).sort(byTime);
+  const need = list.filter(needsAction);
+  const shown = UI.filter === 'need' ? need : list;
+  return `<div><div class="listhead"><h2>${esc(dateLabel(UI.date))}の依頼</h2>
+      <input type="date" id="f-bdate" data-ui="date" value="${esc(UI.date)}" aria-label="表示する日付">
+      <div class="chips"><button data-act="filter" data-v="need" aria-pressed="${UI.filter === 'need'}">要対応 ${need.length}</button><button data-act="filter" data-v="all" aria-pressed="${UI.filter === 'all'}">すべて ${list.length}</button></div></div>
+    ${!loaded.has('requests') ? `<p class="empty">読み込んでいます…</p>`
+      : shown.length ? `<div class="reqs">${shown.map(reqCard).join('')}</div>`
+      : `<p class="empty">${UI.filter === 'need' && list.length ? '対応が必要な依頼はありません。' : 'この日の依頼はまだありません。左の「電話受付」から登録します。'}</p>${nearDate()}`}</div>`;
+}
+function nearDate() {
+  const ds = [...new Set(Object.values(S.requests).map(r => r.date))].filter(d => d !== UI.date).sort();
+  if (!ds.length) return '';
+  const after = ds.find(d => d > UI.date), d = after || ds[ds.length - 1];
+  return `<p style="text-align:center"><button class="btn btn-ghost btn-sm" data-act="goto-date" data-v="${esc(d)}">依頼がある日(${esc(dateLabel(d))})を表示</button></p>`;
+}
+function reqCard(r) {
+  const rider = S.riders[r.riderId];
+  const [, tone] = STATUS[r.status] || ['', ''];
+  const lastOffer = (r.offers || []).slice(-1)[0];
+  const declined = (r.offers || []).filter(o => o.result === 'declined');
+  const cls = needsAction(r) ? 'need' : tone;
+  let acts = '';
+  const confirmId = 'cancel:' + r.id;
+  if (r.status === 'new' || r.status === 'declined') {
+    acts = `<button class="btn btn-gold btn-sm" data-act="find" data-id="${r.id}">${UI.sel === r.id ? '候補を閉じる' : '候補を探す'}</button>
+      <button class="btn btn-ghost btn-sm" data-act="taxi" data-id="${r.id}">提携タクシーへ切替</button>`;
+  } else if (r.status === 'offered') {
+    const mins = lastOffer ? Math.max(0, Math.round((Date.now() - Date.parse(lastOffer.at)) / 60000)) : 0;
+    acts = `<span class="hint">依頼から${mins}分経過</span><button class="btn btn-ghost btn-sm" data-act="withdraw" data-id="${r.id}">依頼を取り下げる</button>`;
+  } else if (r.status === 'accepted') {
+    acts = r.riderNotified ? `<span class="hint">利用者へ連絡済み</span>`
+      : `<button class="btn btn-teal btn-sm" data-act="notified" data-id="${r.id}">利用者へ確定の電話をした</button>`;
+  } else if (r.status === 'noshow' && !r.noshowChecked) {
+    acts = `<button class="btn btn-ghost btn-sm" data-act="noshowok" data-id="${r.id}">利用者に確認した</button>`;
+  } else if (r.status === 'done') {
+    const sv = S.surveys[r.id];
+    acts = sv ? `<span class="hint">アンケート: 満足度 ${esc(sv.satisfaction)}/5 ・移動の負担 ${esc(EASIER[sv.easier] || '')}${sv.comment ? ' ・「' + esc(sv.comment) + '」' : ''}</span>`
+      : UI.survey === r.id ? '' : `<button class="btn btn-ghost btn-sm" data-act="survey-open" data-id="${r.id}">利用後アンケートを記録</button>`;
+  } else if (r.status === 'taxi') {
+    acts = cfg().taxiPhone ? `<span class="hint">提携タクシー <span class="mono">${esc(cfg().taxiPhone)}</span></span>` : '';
+  }
+  if (['new', 'declined', 'offered', 'accepted', 'taxi'].includes(r.status)) {
+    acts += UI.confirm === confirmId
+      ? `<button class="btn btn-red btn-sm" data-act="cancel" data-id="${r.id}">取消を確定</button><button class="btn btn-ghost btn-sm" data-act="unconfirm">やめる</button>`
+      : `<button class="btn btn-ghost btn-sm" data-act="ask" data-v="${confirmId}">取消</button>`;
+  }
+  const ev = r.ev || {};
+  const meta = [];
+  if (r.vehicleId && r.status !== 'declined') meta.push(`車両: ${esc(vName(r.vehicleId))}`);
+  if (r.estAddMin != null && r.vehicleId) meta.push(`追加時間 +${r.estAddMin}分`);
+  if (r.estDropMin != null && r.vehicleId) meta.push(`到着見込み ${fromMin(r.estDropMin)}`);
+  if (ev.boardedAt) meta.push(`乗車 ${hhmm(ev.boardedAt)}`);
+  if (ev.droppedAt) meta.push(`降車 ${hhmm(ev.droppedAt)}`);
+  return `<article class="req ${cls}">
+    <div class="req-h"><span class="t">${esc(r.pickupTime)}</span>${pill(r)}${r.shared && r.vehicleId ? '<span class="pill p-shared">乗合</span>' : ''}${r.sample ? '<span class="pill p-sample">サンプル</span>' : ''}${r.repeatGroup ? `<span class="pill">定期 ${esc(r.repeatIndex)}/${esc(r.repeatTotal)}</span>` : ''}
+      <span class="who">#${esc(r.riderNo)} ${esc(rider?.name || '')}</span></div>
+    <div class="route">${esc(r.pickupLabel)}${r.pickupDetail ? `(${esc(r.pickupDetail)})` : ''} → <b>${esc(r.destLabel)}</b> ・${esc(r.party)}名${r.wheelchair ? ' ・車椅子' : ''}</div>
+    ${r.care ? `<div class="care">配慮: ${esc(r.care)}</div>` : ''}
+    ${meta.length ? `<div class="meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>` : ''}
+    ${declined.length ? `<div class="meta">${declined.map(o => `<span>辞退: ${esc(vName(o.vehicleId))}${o.reason ? '(' + esc(o.reason) + ')' : ''}</span>`).join('')}</div>` : ''}
+    ${r.status === 'noshow' && r.noshowNote ? `<div class="meta"><span>運転手より: ${esc(r.noshowNote)}</span></div>` : ''}
+    ${acts ? `<div class="row-btns" style="align-items:center">${acts}</div>` : ''}
+    ${UI.sel === r.id && (r.status === 'new' || r.status === 'declined') ? candPanel(r) : ''}
+    ${UI.survey === r.id ? surveyForm(r) : ''}
+    ${r.log?.length ? `<details class="ex"><summary>操作の記録 ${r.log.length}件</summary><ul>${r.log.map(l => `<li><span class="mono">${esc(dateLabel(todayStr(new Date(l.at))))} ${hhmm(l.at)}</span> ${esc(l.act)} <span class="hint">${esc(personName(l.by))}</span></li>`).join('')}</ul></details>` : ''}
+  </article>`;
+}
+/* 記録に残したidを、表示する人ごとに名前へ解決する(名前はデータに保存しない) */
+let USER = null;
+const NAMES = {}, asked = new Set();
+function personName(id) {
+  if (!id) return MODE === 'demo' ? '(デモ)' : '';
+  if (id in NAMES) return NAMES[id];
+  if (USER && !asked.has(id)) {
+    asked.add(id);
+    Promise.resolve().then(async () => {
+      const ids = [...asked].filter(x => !(x in NAMES));
+      const ps = await USER.profiles(ids);
+      ids.forEach(x => NAMES[x] = (ps[x] && ps[x].name) || (x === ME ? 'あなた' : '名前不明'));
+      scheduleRender();
+    });
+  }
+  return '';
+}
+const EASIER = { yes: '軽くなった', same: '変わらない', no: '重くなった' };
+function surveyForm(r) {
+  return `<form class="f cands" data-form="survey" data-id="${r.id}"><div class="cands-h">電話で伺った内容を記録します(利用者の同意の範囲で)。</div>
+    <div class="g2"><label>満足度<select id="sv-sat">${[5, 4, 3, 2, 1].map(n => `<option value="${n}">${n} ${['', 'とても不満', '不満', 'ふつう', '満足', 'とても満足'][n]}</option>`).join('')}</select></label>
+    <label>通院・買い物の移動の負担<select id="sv-easier">${Object.entries(EASIER).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label></div>
+    <label>ご意見(任意)<input id="sv-comment" maxlength="200"></label>
+    <div class="row-btns"><button class="btn btn-gold btn-sm" type="submit">保存</button><button class="btn btn-ghost btn-sm" type="button" data-act="survey-close">閉じる</button></div></form>`;
+}
+function candPanel(r) {
+  const { ok, ng } = candidates(r);
+  const c = cfg();
+  return `<div class="cands"><div class="cands-h">この方を乗せられる車を、負担の少ない順に並べました。<b>+◯分</b>は、この方を乗せるために車の走る時間が増える分(少ないほど効率的)。<b>乗合</b>は、ほかの方と一緒に乗ることです。どの車に頼むかは、受付担当が決めます。</div>
+    ${ok.length ? ok.slice(0, 4).map((x, i) => `<div class="cand">
+        <div><div class="rank">候補 ${i + 1}</div><b>${esc(x.v.name)}</b> <span class="sub">${esc(x.v.owner || '')}</span>
+          <div class="sub">お迎え ${fromMin(x.pickAt)}${x.pickAt > toMin(r.pickupTime) ? `(${x.pickAt - toMin(r.pickupTime)}分遅れ)` : ''} ・降車見込み ${fromMin(x.dropAt)}${x.delay ? ` ・他の方の到着 +${x.delay}分` : ''}</div></div>
+        <div style="text-align:right"><div class="add">+${x.added}分</div>${x.shared ? '<span class="pill p-shared">乗合</span>' : '<span class="sub">単独</span>'}</div>
+        <div class="act"><button class="btn btn-gold btn-sm btn-block" data-act="offer" data-id="${r.id}" data-v="${x.v.id}">この車両に依頼する</button></div>
+      </div>`).join('')
+      : `<div class="care">条件に合う車両がありません。提携タクシーへの通常配車に切り替えてください${c.taxiPhone ? `(<span class="mono">${esc(c.taxiPhone)}</span>)` : ''}。</div>`}
+    ${ng.length ? `<details class="ex"><summary>対象外の車両 ${ng.length}台</summary><ul>${ng.map(x => `<li><b>${esc(x.v.name)}</b>: ${x.reasons.map(esc).join('、')}</li>`).join('')}</ul></details>` : ''}
+    <div class="hint">所要時間は直線距離×${c.roadFactor}、平均${c.speedKmh}km/hでの概算です。同乗者の迂回上限 ${c.detourMaxMin}分、同時対応 ${c.maxConcurrent}件まで。</div>
+  </div>`;
+}
+
+/* ---- 地区の地図(地点の位置関係の略図と、選んだ車両のその日のルート) ---- */
+function vehicleDayStops(v, date) {
+  const past = [];
+  Object.values(S.requests).filter(r => r.vehicleId === v.id && r.date === date).forEach(r => {
+    if (r.ev?.boardedAt) past.push({ t: isoToMin(r.ev.boardedAt), place: r.pickupPlaceId });
+    if (r.ev?.droppedAt) past.push({ t: isoToMin(r.ev.droppedAt), place: r.destPlaceId });
+  });
+  past.sort((a, b) => a.t - b.t);
+  const route = routeOf(v, date), sim = simulate(route, route.seq);
+  const future = route.seq.map(s => ({ t: s.kind === 'pick' ? sim.info[s.id].pick : sim.info[s.id].drop, place: s.place, kind: s.kind, r: S.requests[s.id] }));
+  return { start: route.start, past, future };
+}
+function projector(ps, W, H, pad) {
+  const lat0 = ps.reduce((s, p) => s + p.lat, 0) / ps.length, kx = Math.cos(lat0 * Math.PI / 180);
+  const xs = ps.map(p => p.lng * kx), ys = ps.map(p => p.lat);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const sc = Math.min((W - 2 * pad) / ((maxX - minX) || 1), (H - 2 * pad) / ((maxY - minY) || 1));
+  const ox = (W - (maxX - minX) * sc) / 2, oy = (H - (maxY - minY) * sc) / 2;
+  return p => [Math.round(((p.lng * kx - minX) * sc + ox) * 10) / 10, Math.round((H - ((p.lat - minY) * sc + oy)) * 10) / 10];
+}
+function mapCard() {
+  const ps = Object.values(S.places).filter(p => isFinite(p.lat) && isFinite(p.lng));
+  const vs = Object.values(S.vehicles).sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+  if (ps.length < 2 || !vs.length) return '';
+  const date = UI.date;
+  if (!S.vehicles[UI.mapV]) UI.mapV = (vs.find(v => Object.values(S.requests).some(r => r.vehicleId === v.id && r.date === date && ACTIVE.includes(r.status))) || vs[0]).id;
+  const v = S.vehicles[UI.mapV], W = 600, H = 300, P = projector(ps, W, H, 30);
+  const at = id => S.places[id] ? P(S.places[id]) : null;
+  const { start, past, future } = vehicleDayStops(v, date);
+  const pathOf = pts => pts.filter(Boolean).filter((p, i, a) => !i || p[0] !== a[i - 1][0] || p[1] !== a[i - 1][1]).map((p, i) => (i ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' ');
+  const pastPath = pathOf([at(v.basePlaceId), ...past.map(s => at(s.place))]);
+  const nextPath = pathOf([at(start.place), ...future.map(s => at(s.place))]);
+  const onRoute = new Set([v.basePlaceId, ...past.map(s => s.place), ...future.map(s => s.place)]);
+  const sel = UI.sel && S.requests[UI.sel];
+  if (sel) { onRoute.add(sel.pickupPlaceId); onRoute.add(sel.destPlaceId); }
+  // 停車番号の丸の位置を先に決め、地名はそれと他の地名に重ならない位置(右上→左上→右下→左下)に置く
+  const seen = {}, boxes = [];
+  const stopPos = future.map(s => { const p = at(s.place); if (!p) return null; const k = seen[s.place] = (seen[s.place] || 0) + 1; const q = [p[0] + (k - 1) * 13, p[1] + 12]; boxes.push([q[0] - 9, q[1] - 9, q[0] + 9, q[1] + 9]); return q; });
+  const hit = b => boxes.some(o => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]);
+  if (sel) [sel.pickupPlaceId, sel.destPlaceId].map(at).filter(Boolean).forEach(q => boxes.push([q[0] - 11, q[1] - 11, q[0] + 11, q[1] + 11]));
+  const dots = ps.map(p => {
+    const [x, y] = P(p), base = p.kind === 'base', on = onRoute.has(p.id);
+    let lbl = '';
+    if (on) {
+      const w = p.name.length * 11 + 2;
+      const cand = [[x + 7, y - 5, 'start'], [x - 7, y - 5, 'end'], [x + 7, y + 13, 'start'], [x - 7, y + 13, 'end'], [x + 7, y - 18, 'start']];
+      const box = ([tx, ty, a]) => a === 'start' ? [tx, ty - 10, tx + w, ty + 2] : [tx - w, ty - 10, tx, ty + 2];
+      const c = cand.find(c => { const b = box(c); return b[0] >= 0 && b[2] <= W && !hit(b); }) || cand[0];
+      boxes.push(box(c));
+      lbl = `<text class="lbl on" x="${c[0]}" y="${c[1]}" text-anchor="${c[2]}">${esc(p.name)}</text>`;
+    }
+    return `<g><title>${esc(p.name)}(${esc(KIND[p.kind] || '')})</title>${base ? `<rect class="pt base" x="${x - 4}" y="${y - 4}" width="8" height="8" rx="1"></rect>` : `<circle class="pt" cx="${x}" cy="${y}" r="3.5"></circle>`}${lbl}</g>`;
+  }).join('');
+  const stops = future.map((s, i) => {
+    const q = stopPos[i]; if (!q) return '';
+    const [x, y] = q;
+    return `<g><title>${i + 1}. ${fromMin(s.t)} ${s.kind === 'pick' ? 'お迎え' : '降車'} ${esc(pName(s.place))}(利用者#${esc(s.r?.riderNo || '')})</title><circle class="stopn" cx="${x}" cy="${y}" r="8"></circle><text class="stopt" x="${x}" y="${y}">${i + 1}</text></g>`;
+  }).join('');
+  let reqMarks = '';
+  if (sel && at(sel.pickupPlaceId) && at(sel.destPlaceId)) {
+    const [a, b] = [at(sel.pickupPlaceId), at(sel.destPlaceId)];
+    reqMarks = `<g><title>選択中の依頼: ${esc(sel.pickupLabel)} → ${esc(sel.destLabel)}</title><path class="reqline" d="M${a[0]} ${a[1]} L${b[0]} ${b[1]}"></path><circle class="req" cx="${a[0]}" cy="${a[1]}" r="9"></circle><circle class="req" cx="${b[0]}" cy="${b[1]}" r="9"></circle></g>`;
+  }
+  return `<div class="card map-card"><div class="map-h"><h3>地図 ・ ${esc(dateLabel(date))}</h3>
+      <div class="vchips" role="group" aria-label="ルートを表示する車両">${vs.map(x => `<button data-act="mapv" data-v="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)}</button>`).join('')}</div></div>
+    <svg class="map" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(v.name)}の${esc(dateLabel(date))}のルートの略図">
+      ${pastPath ? `<path class="past" d="${pastPath}"></path>` : ''}${nextPath && future.length ? `<path class="next" d="${nextPath}"></path>` : ''}
+      ${dots}${reqMarks}${stops}</svg>
+    <div class="map-legend"><span><i style="background:var(--ink-soft);opacity:.5"></i>完了した区間</span><span><i style="background:var(--c-solo)"></i>これからのルート(番号は停車順)</span>${sel ? '<span><i style="background:var(--c-share)"></i>選択中の依頼</span>' : ''}<span>□ 車両の拠点</span><span>地点の位置関係を示す略図です(道路は表示していません)</span></div>
+  </div>`;
+}
+
+/* ---- 日ごとの推移(実績・効果検証) ---- */
+function dailySeries(reqs) {
+  const by = {};
+  reqs.forEach(r => (by[r.date] = by[r.date] || []).push(r));
+  return Object.keys(by).sort().map(d => { const k = kpi(by[d]); return { date: d, occ: k.occ, done: k.done, shared: k.shared }; }).filter(x => x.done > 0);
+}
+const roundTop = (x, y, w, h, r) => { r = Math.min(r, w / 2, h); return `M${x} ${y + h} V${y + r} Q${x} ${y} ${x + r} ${y} H${x + w - r} Q${x + w} ${y} ${x + w} ${y + r} V${y + h} Z`; };
+function chartsHtml(reqs, baseline) {
+  const ds = dailySeries(reqs);
+  if (ds.length < 2) return '';
+  const W = 520, H = 220, L = 40, R = 70, T = 18, B = 28, iw = W - L - R, ih = H - T - B;
+  const md = d => { const [, m, dd] = d.split('-'); return `${+m}/${+dd}`; };
+  const step = iw / ds.length, cx = i => L + step * (i + 0.5);
+  const xlab = ds.map((d, i) => (ds.length <= 8 || i % 2 === 0 || i === ds.length - 1) ? `<text class="ax" x="${cx(i)}" y="${H - 8}" text-anchor="middle">${md(d.date)}</text>` : '').join('');
+  // 座席稼働率(1系列の折れ線 + 導入前の基準線)
+  const top = Math.max(0.1, Math.ceil(Math.max(...ds.map(d => d.occ || 0), baseline || 0) * 10) / 10);
+  const y1 = v => T + ih - v / top * ih;
+  const grid1 = [0, top / 2, top].map(v => `<line class="gl" x1="${L}" x2="${W - R}" y1="${y1(v)}" y2="${y1(v)}"></line><text class="ax" x="${L - 6}" y="${y1(v) + 4}" text-anchor="end">${Math.round(v * 100)}%</text>`).join('');
+  const pts = ds.map((d, i) => [cx(i), y1(d.occ || 0)]);
+  const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const area = `${line} L${pts[pts.length - 1][0].toFixed(1)} ${y1(0)} L${pts[0][0].toFixed(1)} ${y1(0)} Z`;
+  const last = ds[ds.length - 1], lp = pts[pts.length - 1];
+  const ref = baseline != null ? `<line class="ref" x1="${L}" x2="${W - R}" y1="${y1(baseline)}" y2="${y1(baseline)}"></line><text class="ax" x="${W - R + 6}" y="${y1(baseline) + 4}">導入前 ${Math.round(baseline * 100)}%</text>` : '';
+  const hits1 = ds.map((d, i) => `<g><title>${md(d.date)} 座席稼働率 ${pct(d.occ)}(完了${d.done}件)</title><rect class="hit" x="${cx(i) - step / 2}" y="${T}" width="${step}" height="${ih}"></rect></g>`).join('');
+  const c1 = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="日ごとの座席稼働率">${grid1}${ref}<path class="ar" d="${area}"></path><path class="ln" d="${line}"></path>
+    ${pts.map(p => `<circle class="dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4"></circle>`).join('')}
+    <text class="val" x="${lp[0] + 8}" y="${lp[1] - 8}">${pct(last.occ)}</text>${xlab}${hits1}</svg>`;
+  // 完了件数(単独 / 乗合 の積み上げ)
+  const maxN = Math.max(...ds.map(d => d.done)), topN = Math.max(10, Math.ceil(maxN / 10) * 10);
+  const y2 = v => T + ih - v / topN * ih, bw = Math.min(24, step * 0.6);
+  const grid2 = [0, topN / 2, topN].map(v => `<line class="gl" x1="${L}" x2="${W - R}" y1="${y2(v)}" y2="${y2(v)}"></line><text class="ax" x="${L - 6}" y="${y2(v) + 4}" text-anchor="end">${v}</text>`).join('');
+  const bars = ds.map((d, i) => {
+    const solo = d.done - d.shared, x = cx(i) - bw / 2, ySolo = y2(solo), hSolo = y2(0) - ySolo, hShare = y2(0) - y2(d.shared);
+    const soloEl = solo ? (d.shared ? `<rect class="b-solo" x="${x}" y="${ySolo}" width="${bw}" height="${hSolo}"></rect>` : `<path class="b-solo" d="${roundTop(x, ySolo, bw, hSolo, 4)}"></path>`) : '';
+    const shareEl = d.shared ? `<path class="b-share" d="${roundTop(x, ySolo - hShare, bw, Math.max(0, hShare - 2), 4)}"></path>` : '';
+    return `<g><title>${md(d.date)} 完了${d.done}件(単独${solo}件・乗合${d.shared}件)</title>${soloEl}${shareEl}<rect class="hit" x="${cx(i) - step / 2}" y="${T}" width="${step}" height="${ih}"></rect></g>`;
+  }).join('');
+  const lastBarTop = y2(last.done);
+  const c2 = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="日ごとの完了件数(単独と乗合)">${grid2}${bars}<text class="val" x="${cx(ds.length - 1)}" y="${lastBarTop - 6}" text-anchor="middle">${last.done}</text>${xlab}</svg>`;
+  const table = `<details class="ex" style="margin-top:6px"><summary>日ごとの数値を表で見る</summary><div class="tbl-wrap"><table><thead><tr><th>日付</th><th class="num">座席稼働率</th><th class="num">完了</th><th class="num">うち乗合</th></tr></thead><tbody>${ds.map(d => `<tr><td>${md(d.date)}</td><td class="num">${pct(d.occ)}</td><td class="num">${d.done}</td><td class="num">${d.shared}</td></tr>`).join('')}</tbody></table></div></details>`;
+  return `<div class="charts">
+    <div class="card"><h3>日ごとの座席稼働率</h3><p class="hint" style="margin:-6px 0 4px">点に触れると、その日の値が出ます。</p>${c1}</div>
+    <div class="card"><h3>日ごとの完了件数</h3><div class="legend"><span><i style="background:var(--c-solo)"></i>単独</span><span><i style="background:var(--c-share)"></i>乗合</span></div>${c2}${table}</div>
+  </div>`;
+}
+
+/* ---- 実績・効果検証 ---- */
+function periodReqs() {
+  const t = todayStr();
+  return Object.values(S.requests).filter(r => UI.period === 'today' ? r.date === t : UI.period === '7d' ? r.date >= addDays(t, -6) && r.date <= t : true);
+}
+function kpi(reqs) {
+  const done = reqs.filter(r => r.status === 'done' && r.ev?.boardedAt && r.ev?.droppedAt);
+  const B = r => Date.parse(r.ev.boardedAt), D = r => Date.parse(r.ev.droppedAt);
+  const sharedSet = new Set(done.filter(a => done.some(b => b !== a && b.vehicleId === a.vehicleId && B(b) < D(a) && B(a) < D(b))).map(r => r.id));
+  const offers = reqs.flatMap(r => r.offers || []);
+  const declines = offers.filter(o => o.result === 'declined').length;
+  const answered = offers.filter(o => o.result === 'accepted' || o.result === 'declined').length;
+  const groups = {};
+  done.forEach(r => { const k = r.vehicleId + '|' + r.date; (groups[k] = groups[k] || []).push(r); });
+  const perV = {};
+  let used = 0, cap = 0;
+  Object.entries(groups).forEach(([k, rs]) => {
+    const v = S.vehicles[rs[0].vehicleId]; const capacity = +v?.capacity || 4;
+    // 乗車中の時間 = 誰か1人でも乗っている時間(乗車〜降車の区間を重ね合わせた長さ)
+    const iv = rs.map(r => [B(r), D(r)]).sort((a, b) => a[0] - b[0]);
+    let busy = 0, [cs, ce] = iv[0];
+    for (const [s0, e0] of iv.slice(1)) { if (s0 > ce) { busy += ce - cs; cs = s0; ce = e0; } else ce = Math.max(ce, e0); }
+    busy = (busy + ce - cs) / 60000;
+    const u = rs.reduce((s, r) => s + (+r.party || 1) * (D(r) - B(r)), 0) / 60000;
+    const c = capacity * busy;
+    used += u; cap += c;
+    const p = perV[rs[0].vehicleId] = perV[rs[0].vehicleId] || { trips: 0, pax: 0, mins: 0, used: 0, cap: 0, shared: 0 };
+    p.trips += rs.length; p.pax += rs.reduce((s, r) => s + (+r.party || 1), 0); p.mins += busy; p.used += u; p.cap += c;
+    p.shared += rs.filter(r => sharedSet.has(r.id)).length;
+  });
+  const est = reqs.filter(r => r.estAddMin != null && ['accepted', 'onboard', 'done'].includes(r.status));
+  // 導入前の座席稼働率(車両ごとに登録)との比較。今回の分母(定員×稼働時間)で重み付けする
+  let bW = 0, bSum = 0;
+  Object.entries(perV).forEach(([vid, p]) => { const b = S.vehicles[vid]?.baselineOcc; if (b !== '' && b != null && !isNaN(b)) { bW += p.cap; bSum += p.cap * b / 100; } });
+  const svs = reqs.map(r => S.surveys[r.id]).filter(Boolean);
+  return {
+    baseline: bW ? bSum / bW : null,
+    surveys: svs.length,
+    satisfaction: svs.length ? svs.reduce((s, x) => s + (+x.satisfaction || 0), 0) / svs.length : null,
+    easierRate: svs.length ? svs.filter(x => x.easier === 'yes').length / svs.length : null,
+    total: reqs.filter(r => r.status !== 'cancelled').length,
+    matched: reqs.filter(r => ['accepted', 'onboard', 'done'].includes(r.status)).length,
+    done: done.length, shared: sharedSet.size,
+    taxi: reqs.filter(r => r.status === 'taxi').length,
+    noshow: reqs.filter(r => r.status === 'noshow').length,
+    occ: cap ? used / cap : null,
+    declineRate: answered ? declines / answered : null,
+    avgAdd: est.length ? est.reduce((s, r) => s + r.estAddMin, 0) / est.length : null,
+    perV, sharedSet,
+  };
+}
+const pct = x => x == null ? '—' : Math.round(x * 100) + ' %';
+function kpiView() {
+  const reqs = periodReqs(), k = kpi(reqs);
+  const per = Object.entries(k.perV);
+  return `<div class="listhead"><h2>実績・効果検証</h2>
+      <label class="hint">期間 <select id="f-period" data-ui="period">${[['today', '本日'], ['7d', '直近7日'], ['all', '全期間']].map(([v, l]) => `<option value="${v}" ${UI.period === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <button class="btn btn-ghost btn-sm" data-act="csv">CSVを書き出す</button></div>
+    ${k.done ? `<p class="kpi-say">この期間に <b>${k.done}件</b> の移動を運び、そのうち <b>${k.shared}件</b> は相乗りでした。人を乗せて走っている間、座席は平均 <b>${pct(k.occ)}</b> 埋まっていました${k.baseline != null && k.occ != null ? `(導入前は ${pct(k.baseline)})` : ''}。${k.satisfaction != null ? `利用者の満足度は5点満点で <b>${k.satisfaction.toFixed(1)}</b> です。` : ''}</p>` : ''}
+    <div class="tiles">
+      <div class="tile key"><div class="v">${pct(k.occ)}</div><div class="l">平均座席稼働率</div><div class="s">人を乗せて走る間、座席がどれだけ埋まったか</div></div>
+      <div class="tile"><div class="v">${k.total} 件</div><div class="l">受付</div></div>
+      <div class="tile"><div class="v">${k.matched} 件</div><div class="l">配車成立</div></div>
+      <div class="tile"><div class="v">${k.shared} 件</div><div class="l">乗合成立(完了分)</div><div class="s">ほかの方と同じ車に乗った移動</div></div>
+      <div class="tile"><div class="v">${k.done} 件</div><div class="l">完了</div></div>
+      <div class="tile"><div class="v">${pct(k.declineRate)}</div><div class="l">運転手の辞退率</div><div class="s">依頼のうち、運転手が断った割合</div></div>
+      <div class="tile"><div class="v">${k.avgAdd == null ? '—' : '+' + k.avgAdd.toFixed(1) + ' 分'}</div><div class="l">平均追加時間</div><div class="s">1件を乗せるために増えた走行時間</div></div>
+      <div class="tile"><div class="v">${k.taxi} / ${k.noshow}</div><div class="l">タクシー切替 / 不在</div></div>
+      <div class="tile"><div class="v">${k.baseline == null || k.occ == null ? '—' : `${k.occ >= k.baseline ? '+' : ''}${((k.occ - k.baseline) * 100).toFixed(1)} pt`}</div><div class="l">導入前比(導入前 ${pct(k.baseline)})</div><div class="s">座席の埋まり具合が上がった幅</div></div>
+      <div class="tile"><div class="v">${k.satisfaction == null ? '—' : k.satisfaction.toFixed(1) + ' / 5'}</div><div class="l">利用者の満足度(${k.surveys}件)</div></div>
+      <div class="tile"><div class="v">${pct(k.easierRate)}</div><div class="l">移動の負担が軽くなった</div></div>
+      <div class="tile"><div class="v">${k.done ? Math.round(k.surveys / k.done * 100) + ' %' : '—'}</div><div class="l">アンケート回収率</div></div>
+    </div>
+    ${chartsHtml(reqs, k.baseline)}
+    <div class="card"><h3>車両別</h3>${per.length ? `<div class="tbl-wrap"><table><thead><tr><th>車両</th><th>事業者</th><th class="num">完了</th><th class="num">乗車人数</th><th class="num">乗合</th><th class="num">乗車中の時間</th><th class="num">座席稼働率</th><th class="num">導入前</th></tr></thead><tbody>
+      ${per.map(([vid, p]) => { const b = S.vehicles[vid]?.baselineOcc; return `<tr><td>${esc(vName(vid))}</td><td>${esc(S.vehicles[vid]?.owner || '')}</td><td class="num">${p.trips}</td><td class="num">${p.pax}</td><td class="num">${p.shared}</td><td class="num">${Math.round(p.mins)}分</td><td class="num">${pct(p.cap ? p.used / p.cap : null)}</td><td class="num">${b === '' || b == null ? '未登録' : esc(b) + ' %'}</td></tr>`; }).join('')}
+      </tbody></table></div>` : `<p class="empty">この期間に完了した乗車はまだありません。</p>`}
+      <div class="formula">座席稼働率 = Σ(乗車人数 × 乗車時間) ÷ Σ(定員 × 乗車中の時間)。人を乗せて走っている間に、座席がどれだけ埋まっているかを表します(定員4の車に1人なら25%、乗合で2人なら50%)。乗車中の時間は、その車両に1人でも乗っている時間の合計です。導入前の値と比べるときは、参加前の運行記録も同じ式で集計してください。</div>
+      ${UI.csv ? `<p class="hint">ダウンロードできない環境のため、下の内容をコピーして表計算ソフトに貼り付けてください。</p><textarea class="csv" id="f-csv" readonly>${esc(UI.csv)}</textarea>` : ''}
+    </div>`;
+}
+function buildCsv() {
+  const reqs = periodReqs().sort(byTime), k = kpi(reqs);
+  const head = ['日付', '受付ID', '利用者番号', '乗車地', '行き先', '人数', '車椅子', '希望時刻', '状態', '車両', '事業者', '依頼回数', '辞退回数', '追加時間(分)', '到着', '乗車', '降車', '乗合'];
+  const rows = reqs.map(r => [r.date, r.id, r.riderNo, r.pickupLabel, r.destLabel, r.party, r.wheelchair ? '有' : '', r.pickupTime, (STATUS[r.status] || [r.status])[0],
+    r.vehicleId ? vName(r.vehicleId) : '', r.vehicleId ? (S.vehicles[r.vehicleId]?.owner || '') : '', (r.offers || []).length,
+    (r.offers || []).filter(o => o.result === 'declined').length, r.estAddMin ?? '', hhmm(r.ev?.arrivedAt), hhmm(r.ev?.boardedAt), hhmm(r.ev?.droppedAt), k.sharedSet.has(r.id) ? '1' : '']);
+  return '﻿' + [head, ...rows].map(row => row.map(v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }).join(',')).join('\n');
+}
+
+/* ---- 登録情報(マスタ) ---- */
+const SCHEMA = {
+  riders: { title: '利用者', fields: [
+    { k: 'no', l: '利用者番号', req: true }, { k: 'name', l: '氏名', req: true }, { k: 'kana', l: 'ふりがな' }, { k: 'phone', l: '電話番号(折り返し先)', req: true },
+    { k: 'homePlaceId', l: '自宅の地点', type: 'place', req: true }, { k: 'homeDetail', l: '自宅の目印・住所' },
+    { k: 'care', l: '配慮事項(運転手に伝わります)' }, { k: 'wheelchair', l: '車椅子を使用', type: 'bool' },
+    { k: 'consentDate', l: '利用目的(配車・効果検証)を説明し同意を得た日', type: 'date', req: true },
+  ], cols: ['no', 'name', 'phone', 'homePlaceId', 'care', 'consentDate'] },
+  places: { title: '地点', fields: [
+    { k: 'name', l: '名称', req: true }, { k: 'kind', l: '種別', type: 'kind', req: true },
+    { k: 'lat', l: '緯度', type: 'num', req: true, step: '0.0001' }, { k: 'lng', l: '経度', type: 'num', req: true, step: '0.0001' },
+  ], cols: ['name', 'kind', 'lat', 'lng'] },
+  vehicles: { title: '車両', fields: [
+    { k: 'name', l: '車両名', req: true }, { k: 'owner', l: '事業者', req: true }, { k: 'capacity', l: '定員(運転手除く)', type: 'num', req: true },
+    { k: 'wheelchair', l: '車椅子対応', type: 'bool' }, { k: 'basePlaceId', l: '拠点', type: 'place', req: true },
+    { k: 'hoursStart', l: '運行開始', type: 'time', req: true }, { k: 'hoursEnd', l: '運行終了', type: 'time', req: true }, { k: 'available', l: '受付中', type: 'bool' },
+    { k: 'baselineOcc', l: '導入前の座席稼働率(%・同じ式で集計した値)', type: 'num', step: '0.1' },
+  ], cols: ['name', 'owner', 'capacity', 'wheelchair', 'basePlaceId', 'hoursStart', 'hoursEnd'] },
+  settings: { title: '運用設定', fields: [
+    { k: 'operatorPhone', l: '運営者の電話番号(運転手画面に表示)' }, { k: 'taxiPhone', l: '提携タクシーの電話番号' },
+    { k: 'retentionUntil', l: 'データの保管期限(自治体と取り決めた日)', type: 'date' },
+    { k: 'maxConcurrent', l: '1台あたりの同時対応件数の上限', type: 'num' }, { k: 'detourMaxMin', l: '同乗者の迂回時間の上限(分)', type: 'num' },
+    { k: 'lateTolMin', l: 'お迎え遅れの許容(分)', type: 'num' }, { k: 'boardMin', l: '乗降にかかる時間(分)', type: 'num' },
+    { k: 'speedKmh', l: '平均速度(km/h)', type: 'num' }, { k: 'roadFactor', l: '道路係数(直線距離に掛ける)', type: 'num', step: '0.1' },
+  ] },
+};
+function fieldInput(coll, f, val) {
+  const id = `e-${coll}-${f.k}`;
+  if (f.type === 'bool') return `<label class="chk"><input type="checkbox" id="${id}" data-k="${f.k}" ${val ? 'checked' : ''}>${esc(f.l)}</label>`;
+  let input;
+  if (f.type === 'place') input = `<select id="${id}" data-k="${f.k}"><option value="">選択</option>${placeOpts(val)}</select>`;
+  else if (f.type === 'kind') input = `<select id="${id}" data-k="${f.k}">${Object.entries(KIND).map(([k, l]) => `<option value="${k}" ${k === val ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  else input = `<input id="${id}" data-k="${f.k}" type="${f.type === 'num' ? 'number' : f.type || 'text'}" ${f.step ? `step="${f.step}"` : ''} value="${esc(val ?? '')}">`;
+  return `<label>${esc(f.l)}${f.req ? ' *' : ''}${input}</label>`;
+}
+function cellVal(coll, k, v) {
+  if (k.endsWith('PlaceId')) return esc(pName(v));
+  if (k === 'kind') return esc(KIND[v] || v);
+  if (typeof v === 'boolean') return v ? '○' : '';
+  return esc(v ?? '');
+}
+/* ---- CSV一括登録(Excelの「CSV」保存に対応。Shift_JISも読める) ---- */
+const IMPORT = {
+  riders: { cols: [['利用者番号', 'no', 1], ['氏名', 'name', 1], ['ふりがな', 'kana'], ['電話番号', 'phone', 1], ['自宅の地点', 'home', 1], ['自宅の目印・住所', 'homeDetail'], ['配慮事項', 'care'], ['車椅子', 'wheelchair'], ['同意取得日', 'consentDate', 1]],
+    example: '0231,山田 花子,やまだ はなこ,027-000-0000,南町3丁目,南町3-12 青い屋根の家,杖を使用,なし,2026-11-01' },
+  places: { cols: [['名称', 'name', 1], ['種別', 'kind', 1], ['緯度', 'lat', 1], ['経度', 'lng', 1]],
+    example: '中央病院,医療機関,36.3050,139.0100' },
+};
+function parseCsv(t) {
+  const rows = []; let row = [], f = '', q = false;
+  t = t.replace(/^﻿/, '');
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) { if (c === '"') { if (t[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += c;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim()));
+}
+const normDate = s => { const m = String(s).trim().match(/^(\d{4})[\/\-.年](\d{1,2})[\/\-.月](\d{1,2})日?$/); return m ? `${m[1]}-${pad(+m[2])}-${pad(+m[3])}` : null; };
+const YES = /^(有|あり|はい|使用|○|◯|1|true|yes)$/i;
+function prepImport(coll, text) {
+  const rows = parseCsv(text), spec = IMPORT[coll].cols;
+  if (rows.length < 2) return { error: '見出し行と、1行以上のデータが必要です。' };
+  const head = rows[0].map(h => h.trim());
+  const idx = spec.map(([l]) => head.indexOf(l));
+  const miss = spec.filter(([, , req], j) => req && idx[j] < 0).map(([l]) => l);
+  if (miss.length) return { error: `見出しに「${miss.join('」「')}」がありません。記入例の見出し行を1行目に入れてください。` };
+  const seen = new Set();
+  const items = rows.slice(1).map((r, n) => {
+    const o = {}, errs = [];
+    spec.forEach(([l, k, req], j) => { o[k] = idx[j] >= 0 ? (r[idx[j]] || '').trim() : ''; if (req && !o[k]) errs.push(`${l}が空`); });
+    let id, data;
+    if (coll === 'riders') {
+      const home = Object.values(S.places).find(p => p.name === o.home);
+      if (o.home && !home) errs.push(`地点「${o.home}」が未登録`);
+      const cd = o.consentDate ? normDate(o.consentDate) : null;
+      if (o.consentDate && !cd) errs.push('同意取得日の形式');
+      if (seen.has(o.no)) errs.push('利用者番号がファイル内で重複'); seen.add(o.no);
+      const ex = Object.values(S.riders).find(x => x.no === o.no);
+      id = ex ? ex.id : newId('r');
+      data = { no: o.no, name: o.name, kana: o.kana, phone: o.phone, homePlaceId: home?.id || '', homeDetail: o.homeDetail, care: o.care, wheelchair: YES.test(o.wheelchair), consentDate: cd };
+      return { line: n + 2, id, data, update: !!ex, errs, label: `${o.no} ${o.name}` };
+    }
+    const kind = KIND[o.kind] ? o.kind : Object.keys(KIND).find(k => KIND[k] === o.kind || KIND[k].startsWith(o.kind));
+    if (o.kind && !kind) errs.push(`種別「${o.kind}」(町丁目/医療機関/買い物/公共施設/車両の拠点)`);
+    const lat = Number(o.lat), lng = Number(o.lng);
+    if (o.lat && !(lat >= 20 && lat <= 46)) errs.push('緯度が国内の範囲外');
+    if (o.lng && !(lng >= 122 && lng <= 154)) errs.push('経度が国内の範囲外');
+    if (seen.has(o.name)) errs.push('名称がファイル内で重複'); seen.add(o.name);
+    const ex = Object.values(S.places).find(p => p.name === o.name);
+    id = ex ? ex.id : newId('p');
+    data = { name: o.name, kind, lat, lng };
+    return { line: n + 2, id, data, update: !!ex, errs, label: o.name };
+  });
+  return { items };
+}
+function importPanel(coll) {
+  const imp = UI.imp, spec = IMPORT[coll], res = imp.text ? prepImport(coll, imp.text) : null;
+  const ok = res?.items?.filter(i => !i.errs.length) || [], ng = res?.items?.filter(i => i.errs.length) || [];
+  const head = spec.cols.map(c => c[0]).join(',');
+  return `<div class="card" style="margin-bottom:16px"><h3>${esc(SCHEMA[coll].title)}をCSVで一括登録</h3>
+    <p class="hint">Excelで1行目に見出しを入れ、「CSV」形式で保存したファイルを選びます。同じ${coll === 'riders' ? '利用者番号' : '名称'}がすでにあれば上書きします。${coll === 'riders' ? '自宅の地点は、先に「地点」に登録した名称と同じにしてください。' : ''}</p>
+    <div class="formula" style="margin:8px 0"><div class="mono" style="font-size:11px;overflow-x:auto;white-space:nowrap">${esc(head)}<br>${esc(spec.example)}</div></div>
+    <div class="row-btns" style="align-items:center"><input type="file" id="imp-file" accept=".csv,text/csv"><button class="btn btn-ghost btn-sm" data-act="copy" data-v="${esc(head + '\n' + spec.example)}">記入例をコピー</button></div>
+    <form class="f" style="margin-top:10px"><label>または、表計算ソフトからコピーした内容を貼り付け<textarea id="imp-text" data-imp="1" rows="4" class="csv" style="height:auto">${esc(imp.text)}</textarea></label></form>
+    ${res?.error ? `<div class="err" role="alert">${esc(res.error)}</div>` : ''}
+    ${res?.items ? `<p>登録できる行 <b>${ok.length}</b>件(うち上書き ${ok.filter(i => i.update).length}件)・エラー <b>${ng.length}</b>件</p>
+      ${ng.length ? `<ul class="err" style="margin:0 0 8px;padding-left:18px">${ng.slice(0, 20).map(i => `<li>${i.line}行目 ${esc(i.label)}: ${i.errs.map(esc).join('、')}</li>`).join('')}${ng.length > 20 ? `<li>ほか${ng.length - 20}件</li>` : ''}</ul>` : ''}` : ''}
+    ${imp.progress ? `<p class="hint">${esc(imp.progress)}</p>` : ''}
+    <div class="row-btns"><button class="btn btn-gold" data-act="imp-run" ${ok.length && !imp.busy ? '' : 'disabled'}>${ok.length}件を登録する</button><button class="btn btn-ghost" data-act="imp-close">閉じる</button></div></div>`;
+}
+function readCsvFile(file) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    const buf = new Uint8Array(fr.result);
+    let t = new TextDecoder('utf-8').decode(buf);
+    if (t.includes(String.fromCharCode(0xFFFD))) { try { t = new TextDecoder('shift_jis').decode(buf); } catch (e) {} }
+    UI.imp.text = t; UI.imp.progress = ''; render();
+  };
+  fr.readAsArrayBuffer(file);
+}
+
+/* 実証実験の開始前チェック(登録状況から自動判定) */
+function readiness() {
+  const c = cfg(), real = coll => Object.values(S[coll]).filter(d => !d.sample);
+  const vs = real('vehicles'), rs = real('riders'), ps = real('places');
+  const items = [
+    [!COLLS.some(k => Object.values(S[k]).some(d => d.sample)), 'サンプルデータを削除した'],
+    [vs.length >= 3, `参加車両を3台以上登録した(現在${vs.length}台・目安3〜5台)`],
+    [vs.length > 0 && vs.some(v => v.wheelchair), '車椅子に対応できる車両が1台以上ある'],
+    [ps.filter(p => p.kind === 'area').length >= 3 && ps.filter(p => p.kind !== 'area' && p.kind !== 'base').length >= 3, `対象地区の町丁目と主な行き先を登録した(現在${ps.length}地点)`],
+    [rs.length >= 50, `利用者を事前登録した(現在${rs.length}名・目安50〜100名)`],
+    [rs.length > 0 && rs.every(r => r.consentDate), '全利用者の同意取得日を記録した'],
+    [c.operatorPhone && c.operatorPhone !== DEF.operatorPhone, '運営者の電話番号を設定した'],
+    [!!c.taxiPhone, '提携タクシーの電話番号を設定した(配車できない時の切替先)'],
+    [!!c.retentionUntil, 'データの保管期限を自治体と取り決め、運用設定に入れた'],
+  ];
+  const done = items.filter(i => i[0]).length;
+  return `<details class="card" style="margin-bottom:16px" ${done < items.length && !hasDemo() ? 'open' : ''}><summary><b>実証実験の開始前チェック</b> <span class="hint">${done}/${items.length} 完了</span></summary>
+    <ul style="list-style:none;padding:0;margin:10px 0 0;display:grid;gap:6px">${items.map(([ok, l]) => `<li><span class="pill ${ok ? 'p-accepted' : 'p-new'}">${ok ? '済' : '未'}</span> ${esc(l)}</li>`).join('')}</ul>
+    <p class="hint">運転手には共有メニューから「Contributor(参加者)」、オペレーターには「Editor(編集者)」の権限で招待してください。</p></details>`;
+}
+function masterView() {
+  const tabs = [['riders', '利用者'], ['places', '地点'], ['vehicles', '車両'], ['settings', '運用設定']];
+  const coll = UI.mtab, sc = SCHEMA[coll];
+  const hasSample = COLLS.some(c => Object.values(S[c]).some(d => d.sample));
+  let body;
+  if (coll === 'settings') {
+    const data = UI.edit?.coll === 'settings' ? UI.edit.data : cfg();
+    body = `<div class="card"><form class="f" data-form="edit" data-coll="settings" data-id="main"><div class="g2">${sc.fields.map(f => fieldInput(coll, f, data[f.k])).join('')}</div>
+      <div class="row-btns"><button class="btn btn-gold" type="submit">設定を保存</button></div></form></div>`;
+  } else {
+    const items = Object.values(S[coll]).sort((a, b) => String(a.no || a.name).localeCompare(String(b.no || b.name), 'ja'));
+    const ed = UI.edit && UI.edit.coll === coll ? UI.edit : null;
+    const delId = ed?.id ? 'del:' + ed.id : null;
+    body = `${ed ? `<div class="card"><h3>${esc(sc.title)}を${ed.id ? '編集' : '追加'}</h3><form class="f" data-form="edit" data-coll="${coll}" data-id="${esc(ed.id || '')}">
+        <div class="g2">${sc.fields.map(f => fieldInput(coll, f, ed.data[f.k])).join('')}</div>
+        ${ed.err ? `<div class="err" role="alert">${esc(ed.err)}</div>` : ''}
+        <div class="row-btns"><button class="btn btn-gold" type="submit">保存</button><button class="btn btn-ghost" type="button" data-act="edit-cancel">閉じる</button>
+        ${ed.id ? (UI.confirm === delId ? `<button class="btn btn-red" type="button" data-act="edit-del">削除を確定</button>` : `<button class="btn btn-ghost" type="button" data-act="ask" data-v="${esc(delId)}">削除</button>`) : ''}</div>
+      </form></div>` : ''}
+      ${UI.imp && UI.imp.coll === coll ? importPanel(coll) : ''}
+      <div class="card"><div class="listhead"><h3>${esc(sc.title)} ${items.length}件</h3>
+        ${IMPORT[coll] ? `<button class="btn btn-ghost btn-sm" data-act="imp-open">CSVで一括登録</button>` : ''}
+        <button class="btn btn-gold btn-sm" data-act="edit-new">${esc(sc.title)}を追加</button></div>
+      ${items.length ? `<div class="tbl-wrap"><table><thead><tr>${sc.cols.map(k => `<th>${esc(sc.fields.find(f => f.k === k).l.replace(/\(.+\)/, ''))}</th>`).join('')}<th></th></tr></thead><tbody>
+        ${items.map(it => `<tr>${sc.cols.map(k => `<td>${cellVal(coll, k, it[k])}</td>`).join('')}<td>${it.sample ? '<span class="pill p-sample">サンプル</span> ' : ''}<button class="btn btn-ghost btn-sm" data-act="edit" data-id="${esc(it.id)}">編集</button></td></tr>`).join('')}
+      </tbody></table></div>` : `<p class="empty">まだ登録がありません。「${esc(sc.title)}を追加」から登録します。</p>`}
+      ${coll === 'riders' ? `<div class="formula">利用者の氏名・電話番号はオペレーター(このページの編集権限を持つ人)だけが閲覧できます。運転手に共有されるのは、乗車地・行き先・配慮事項・利用者番号のみです。</div>` : ''}
+      ${coll === 'places' ? `<div class="formula">緯度・経度は地図アプリで地点を長押しすると確認できます。対象地区(半径5〜10km)内の町丁目・病院・商業施設・公共施設・車両の拠点を登録してください。</div>` : ''}
+      </div>`;
+  }
+  return `${readiness()}<div class="subtabs">${tabs.map(([k, l]) => `<button data-act="mtab" data-v="${k}" aria-pressed="${UI.mtab === k}">${l}</button>`).join('')}</div>${body}
+    <div class="card" style="margin-top:16px"><h3>デモデータ</h3><p class="hint">${hasSample ? '架空のデモデータ(「サンプル」表示のもの)が入っています。売り込みのデモの前に「今日の日付で作り直す」を押すと、直近2週間の運行と今日10時ごろの状況がそろいます。本番の運用を始めるときは削除してください。' : 'デモデータは入っていません。「デモデータを入れる」で、架空の地区・車両5台・利用者12名と、直近2週間の運行記録を作ります。'}</p>
+      <div class="presets" role="radiogroup" aria-label="デモのシナリオ">${Object.entries(DEMO_PRESETS).map(([k, p]) => `<button role="radio" aria-checked="${(UI.preset || currentPreset()) === k}" data-act="preset" data-v="${k}"><b>${esc(p.label)}</b><span>${esc(p.desc)}</span></button>`).join('')}</div>
+      ${UI.demoProgress ? `<p class="hint">${esc(UI.demoProgress)}</p>` : ''}
+      <div class="row-btns"><button class="btn btn-gold" data-act="demo-reset" ${UI.demoProgress ? 'disabled' : ''}>${hasSample ? (UI.preset && UI.preset !== currentPreset() ? `「${esc(DEMO_PRESETS[UI.preset].label)}」に切り替える` : '今日の日付で作り直す') : 'デモデータを入れる'}</button>
+      ${hasSample ? (UI.confirm === 'sample' ? `<button class="btn btn-red" data-act="sample-del">デモデータをすべて削除</button><button class="btn btn-ghost" data-act="unconfirm">やめる</button>` : `<button class="btn btn-ghost" data-act="ask" data-v="sample">デモデータを削除する</button>`) : ''}</div></div>
+    ${cleanupCard()}`;
+}
+/* 実証終了後のデータ整理(提案書 §10: 保管期間・削除方法を事前に取り決める) */
+function cleanupCard() {
+  const c = cfg(), nR = Object.keys(S.riders).length, nQ = Object.keys(S.requests).length;
+  const due = c.retentionUntil && todayStr() > c.retentionUntil;
+  return `<div class="card" style="margin-top:16px"><h3>実証終了後のデータ整理</h3>
+    <p class="hint">保管期限: ${c.retentionUntil ? esc(c.retentionUntil) + (due ? '(期限を過ぎています)' : '') : '未設定(運用設定で入力)'}。先に「実績・効果検証」からCSVを書き出してください。</p>
+    <ul class="hint" style="margin:6px 0 10px;padding-left:18px">
+      <li><b>匿名化</b>: 利用者の名簿(${nR}名)を削除し、依頼記録から住所の目印・配慮事項・アンケートの自由記述を消します。件数・時刻・地点などの集計用データは残ります。</li>
+      <li><b>すべて削除</b>: 依頼(${nQ}件)・アンケートを含むすべての記録を削除します。車両・地点・運用設定は残ります。</li></ul>
+    ${UI.cleanup ? `<p class="err">取り消せません。本当に「${UI.cleanup === 'anon' ? '匿名化' : 'すべて削除'}」を実行しますか。</p>
+      <div class="row-btns"><button class="btn btn-red" data-act="cleanup-run" ${UI.cleanupBusy ? 'disabled' : ''}>実行する</button><button class="btn btn-ghost" data-act="cleanup-ask" data-v="">やめる</button></div>`
+      : `<div class="row-btns"><button class="btn btn-ghost" data-act="cleanup-ask" data-v="anon">匿名化する</button><button class="btn btn-red" data-act="cleanup-ask" data-v="all">すべて削除する</button></div>`}
+  </div>`;
+}
+async function runCleanup(kind) {
+  let n = 0;
+  for (const id of Object.keys(S.riders)) if (await remove('riders', id)) n++;
+  if (kind === 'anon') {
+    for (const r of Object.values(S.requests)) if (r.pickupDetail || r.care || r.riderId) await patch('requests', r.id, { pickupDetail: '', care: '', riderId: '', log: (r.log || []).map(l => ({ at: l.at, act: l.act })) });
+    for (const s of Object.values(S.surveys)) if (s.comment || s.riderId) await patch('surveys', s.id, { comment: '', riderId: '' });
+  } else {
+    for (const id of Object.keys(S.requests)) await remove('requests', id);
+    for (const id of Object.keys(S.surveys)) await remove('surveys', id);
+  }
+  return n;
+}
+
+/* ============ 画面: 運転手 ============ */
+function driverView(embedded) {
+  const v = S.vehicles[UI.myVehicle];
+  if (!loaded.has('vehicles')) return `<div class="wrap"><p class="empty">読み込んでいます…</p></div>`;
+  if (!v) {
+    const vs = Object.values(S.vehicles);
+    return `<div class="wrap"><div class="picker"><h2>担当する車両を選んでください</h2>
+      ${vs.length ? vs.map(x => `<button data-act="pick-vehicle" data-v="${esc(x.id)}"><b>${esc(x.name)}</b><span>${esc(x.owner || '')} ・定員${esc(x.capacity)}</span></button>`).join('') : '<p class="empty">車両が登録されていません。運営者に連絡してください。</p>'}
+      <p class="hint">この端末で選んだ車両は次回も自動で選ばれます。</p></div></div>`;
+  }
+  const today = todayStr();
+  const mine = Object.values(S.requests).filter(r => r.vehicleId === v.id);
+  const offers = mine.filter(r => r.status === 'offered').sort(byTime);
+  const todays = mine.filter(r => r.date === today && ['accepted', 'onboard', 'done', 'noshow'].includes(r.status)).sort(byTime);
+  const stops = [];
+  todays.forEach(r => {
+    stops.push({ r, kind: 'pick', t: toMin(r.pickupTime), done: !!r.ev?.boardedAt || r.status === 'noshow' });
+    if (r.status !== 'noshow') stops.push({ r, kind: 'drop', t: r.estDropMin ?? toMin(r.pickupTime) + 10, done: !!r.ev?.droppedAt });
+  });
+  stops.sort((a, b) => a.t - b.t || (a.kind === 'drop' ? -1 : 1));
+  const next = stops.find(s => !s.done);
+  const onPax = todays.filter(r => r.status === 'onboard').reduce((s, r) => s + (+r.party || 1), 0);
+  const tab = UI.drvTab;
+  let body;
+  if (tab === 'run') body = drvRun(v, next, onPax);
+  else if (tab === 'log') body = drvLog(v, todays);
+  else body = drvReq(v, offers, stops, next);
+  return `<div class="phone${embedded ? ' embedded' : ''}">
+    <div class="dhead"><div class="who"><span>ドライバー</span><button data-act="change-vehicle">車両を変更</button></div>
+      <div class="veh">${esc(v.name)}(定員${esc(v.capacity)})</div>
+      <div class="row-btns"><button class="toggle ${v.available === false ? 'off' : ''}" data-act="avail" aria-pressed="${v.available !== false}"><i></i>${v.available === false ? '受付停止中(タップで再開)' : '受付中(タップで停止)'}</button>
+      <button class="toggle ${soundOn() ? '' : 'off'}" data-act="sound" aria-pressed="${soundOn()}"><i></i>新着の通知音 ${soundOn() ? 'オン' : 'オフ'}</button></div></div>
+    ${CAN.write ? '' : `<div class="notice" style="margin:12px 4px 0">閲覧のみの権限です。承諾や乗車記録を行うには、運営者に「参加者(Contributor)」以上の権限をもらってください。</div>`}
+    <div class="dbody">${body}</div>
+    <nav class="dtabs"><button data-act="drvtab" data-v="req" aria-pressed="${tab === 'req'}">依頼・ルート${offers.length ? `<span class="badge">${offers.length}</span>` : ''}</button>
+      <button data-act="drvtab" data-v="run" aria-pressed="${tab === 'run'}">走行中</button><button data-act="drvtab" data-v="log" aria-pressed="${tab === 'log'}">実績</button></nav>
+  </div>`;
+}
+function stopLine(s, i, next) {
+  const r = s.r;
+  const label = s.kind === 'pick' ? `${esc(r.pickupLabel)} / 利用者#${esc(r.riderNo)}` : `${esc(r.destLabel)}(#${esc(r.riderNo)} 降車)`;
+  const sub = s.kind === 'pick'
+    ? (r.status === 'noshow' ? '不在・乗車なし' : r.ev?.boardedAt ? `${hhmm(r.ev.boardedAt)} 乗車` : `${r.pickupTime} お迎え${r.pickupDetail ? ' ・' + esc(r.pickupDetail) : ''}`)
+    : (r.ev?.droppedAt ? `${hhmm(r.ev.droppedAt)} 降車` : `${fromMin(s.t)} 着予定`);
+  return `<div class="stop ${s.done ? 'done' : ''} ${s === next ? 'next' : ''}"><div class="n">${s.done ? '✓' : i + 1}</div><div><div class="t">${label}</div><div class="s">${sub}</div></div></div>`;
+}
+function drvReq(v, offers, stops, next) {
+  const offerHtml = offers.map(r => `<div class="alert">
+      <div class="tag">NEW 配車依頼</div>
+      <div class="time">${esc(dateLabel(r.date))} ${esc(r.pickupTime)} お迎え</div>
+      <div class="kv"><span class="k">乗車地</span><span>${esc(r.pickupLabel)}${r.pickupDetail ? `(${esc(r.pickupDetail)})` : ''}</span></div>
+      <div class="kv"><span class="k">行き先</span><span>${esc(r.destLabel)}</span></div>
+      <div class="kv"><span class="k">人数</span><span>${esc(r.party)}名${r.wheelchair ? ' ・車椅子' : ''}</span></div>
+      <div class="kv"><span class="k">追加時間</span><span>現ルートに +${esc(r.estAddMin ?? '?')}分${r.shared ? '(乗合)' : ''}</span></div>
+      ${r.care ? `<div class="care">配慮: ${esc(r.care)}</div>` : ''}
+      ${UI.declining === r.id ? `<div class="sec">辞退の理由</div><div class="row-btns">${['時間が合わない', '車両の都合', '車椅子を載せられない', 'その他'].map(x => `<button class="btn btn-ghost btn-sm" data-act="decline" data-id="${r.id}" data-v="${x}">${x}</button>`).join('')}</div>
+          <button class="btn btn-ghost btn-sm" data-act="decline-cancel">戻る</button>`
+        : `<div class="dbtns"><button class="btn btn-ghost" data-act="decline-open" data-id="${r.id}" ${CAN.write ? '' : 'disabled'}>辞退</button><button class="btn btn-gold" data-act="accept" data-id="${r.id}" ${CAN.write ? '' : 'disabled'}>承諾する</button></div>`}
+    </div>`).join('');
+  return `${offerHtml || `<p class="empty" style="padding:12px">新しい配車依頼はありません。</p>`}
+    <div class="sec">本日のルート</div>
+    ${stops.length ? stops.map((s, i) => stopLine(s, i, next)).join('') : `<p class="empty">本日の予定はまだありません。</p>`}`;
+}
+function drvRun(v, next, onPax) {
+  const c = cfg();
+  const seats = `<div class="seats" aria-label="乗車中 ${onPax}/${v.capacity}名">${Array.from({ length: Math.min(v.capacity, 10) }, (_, i) => `<span class="seat ${i < onPax ? 'on' : ''}"></span>`).join('')}</div>`;
+  let main;
+  if (!next) main = `<div class="big-next"><div class="what">次の停車</div><p class="empty">本日の予定はすべて終わりました。</p></div>`;
+  else {
+    const r = next.r, ev = r.ev || {};
+    if (next.kind === 'pick') {
+      main = `<div class="big-next"><div class="what">次のお迎え ・${esc(r.pickupTime)}</div>
+        <div class="place">${esc(r.pickupLabel)}</div>
+        ${r.pickupDetail ? `<div>${esc(r.pickupDetail)}</div>` : ''}
+        <div class="hint">利用者#${esc(r.riderNo)} ・${esc(r.party)}名 → ${esc(r.destLabel)}</div>
+        ${r.care ? `<div class="care">配慮: ${esc(r.care)}</div>` : ''}
+        <div class="hint">乗車中 ${onPax}/${esc(v.capacity)}名</div>${seats}
+        ${!ev.arrivedAt
+          ? `<button class="btn btn-teal btn-big btn-block" data-act="arrived" data-id="${r.id}" ${CAN.write ? '' : 'disabled'}>到着を記録</button>`
+          : `<div class="hint">${hhmm(ev.arrivedAt)} に到着</div>
+             <button class="btn btn-teal btn-big btn-block" data-act="boarded" data-id="${r.id}" ${CAN.write ? '' : 'disabled'}>乗車を記録</button>
+             ${UI.confirm === 'noshow:' + r.id
+               ? `<div class="row-btns"><button class="btn btn-red" data-act="noshow" data-id="${r.id}">不在として運営者に報告</button><button class="btn btn-ghost" data-act="unconfirm">戻る</button></div>`
+               : `<button class="btn btn-ghost btn-block" data-act="ask" data-v="noshow:${r.id}">利用者が見つからない・乗車なし</button>`}`}
+      </div>`;
+    } else {
+      main = `<div class="big-next"><div class="what">次の降車 ・${fromMin(next.t)} 着予定</div>
+        <div class="place">${esc(r.destLabel)}</div>
+        <div class="hint">利用者#${esc(r.riderNo)} ・${esc(r.party)}名 ・${hhmm(ev.boardedAt)} 乗車</div>
+        ${r.care ? `<div class="care">配慮: ${esc(r.care)}</div>` : ''}
+        <div class="hint">乗車中 ${onPax}/${esc(v.capacity)}名</div>${seats}
+        <button class="btn btn-teal btn-big btn-block" data-act="dropped" data-id="${r.id}" ${CAN.write ? '' : 'disabled'}>降車を記録</button></div>`;
+    }
+  }
+  return `${main}
+    <div class="sec">運営者に連絡</div>
+    <div class="phonebox"><span class="num">${esc(c.operatorPhone)}</span><button class="btn btn-ghost btn-sm" data-act="copy" data-v="${esc(c.operatorPhone)}">番号をコピー</button></div>
+    <p class="hint">利用者への連絡(遅れ・不在の確認)は運営者が行います。位置情報が取れない場所でも、記録は端末に保存され、通信が戻ると送信されます。</p>`;
+}
+function drvLog(v, todays) {
+  const k = kpi(todays);
+  const done = todays.filter(r => r.status === 'done');
+  return `<div class="sec">本日の実績</div>
+    <div class="sum"><div class="tile"><div class="v">${done.length} 件</div><div class="l">完了</div></div>
+      <div class="tile"><div class="v">${done.reduce((s, r) => s + (+r.party || 1), 0)} 名</div><div class="l">乗車人数</div></div>
+      <div class="tile"><div class="v">${pct(k.occ)}</div><div class="l">座席稼働率</div></div>
+      <div class="tile"><div class="v">${k.shared} 件</div><div class="l">乗合成立</div></div></div>
+    <div class="sec">履歴</div>
+    ${done.length ? done.slice().reverse().map(r => `<div class="stop done"><div class="n">✓</div><div><div class="t">利用者#${esc(r.riderNo)} → ${esc(r.destLabel)}</div><div class="s">${hhmm(r.ev?.droppedAt)} 完了</div></div></div>`).join('') : `<p class="empty">まだ完了した乗車はありません。</p>`}`;
+}
+
+/* ============ 運転手への新着通知(音・振動) ============
+   ブラウザは画面に一度触れるまで音を鳴らせないため、最初のタップで音声を準備する */
+let seenOffers = null, audioCtx = null;
+const soundOn = () => ls.get('meguru.sound', true);
+function ensureAudio() {
+  if (audioCtx || !soundOn()) return;
+  try { const A = window.AudioContext || window.webkitAudioContext; if (A) audioCtx = new A(); } catch (e) {}
+}
+function chime() {
+  try { navigator.vibrate && navigator.vibrate([300, 150, 300]); } catch (e) {}
+  if (!audioCtx || !soundOn()) return;
+  try {
+    audioCtx.resume && audioCtx.resume();
+    [0, 0.35, 0.7].forEach((t, i) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain(), s = audioCtx.currentTime + t;
+      o.frequency.value = i === 2 ? 1046 : 784; o.connect(g); g.connect(audioCtx.destination);
+      g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(0.4, s + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.3);
+      o.start(s); o.stop(s + 0.32);
+    });
+  } catch (e) {}
+}
+function checkNewOffers() {
+  if (!(UI.role === 'driver' || splitOn()) || !UI.myVehicle) { seenOffers = null; return; }
+  const ids = Object.values(S.requests).filter(r => r.vehicleId === UI.myVehicle && r.status === 'offered').map(r => r.id);
+  if (seenOffers === null) { seenOffers = new Set(ids); return; }
+  const fresh = ids.filter(i => !seenOffers.has(i));
+  seenOffers = new Set(ids);
+  if (fresh.length) { chime(); UI.drvTab = 'req'; toast('新しい配車依頼が届きました。'); }
+}
+/* 運転中に画面が消えると新着に気づけないため、運転手画面では画面の消灯を防ぐ(端末が許可した場合のみ) */
+let wakeLock = null;
+async function keepScreenOn() {
+  if (UI.role !== 'driver' || wakeLock || !navigator.wakeLock) return;
+  try { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } catch (e) {}
+}
+document.addEventListener('pointerdown', () => { ensureAudio(); keepScreenOn(); }, true);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepScreenOn(); });
+
+/* ============ 描画 ============ */
+function render() {
+  const app = document.getElementById('app');
+  const a = document.activeElement, fid = a && a.id, sel = a && 'selectionStart' in a ? [a.selectionStart, a.selectionEnd] : null;
+  let body;
+  if (MODE === 'connecting') body = `<div class="wrap"><p class="empty">共有データに接続しています…</p></div>`;
+  else if (UI.role === 'operator' && CAN.operator) body = splitOn() ? `<div class="split"><div class="split-main">${operatorView()}</div><aside class="split-phone" aria-label="運転手のスマホ画面">${driverView(true)}</aside></div>` : operatorView();
+  else body = driverView();
+  app.innerHTML = header() + body + tourBox() + (UI.toast ? `<div class="toast${UI.tour ? ' up' : ''}" role="status" data-act="toast-x">${esc(UI.toast)}</div>` : '');
+  if (fid) { const el = document.getElementById(fid); if (el) { el.focus(); if (sel && el.setSelectionRange) try { el.setSelectionRange(sel[0], sel[1]); } catch (e) {} } }
+}
+let pending = false;
+function scheduleRender() {
+  const a = document.activeElement;
+  if (a && a.closest && a.closest('#app') && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'checkbox') { pending = true; return; }
+  if (renderQueued) return;
+  renderQueued = true; setTimeout(() => { renderQueued = false; render(); }, 16);
+}
+let renderQueued = false;
+document.addEventListener('focusout', () => { if (pending) setTimeout(() => { const a = document.activeElement; if (!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) { pending = false; render(); } }, 0); });
+setInterval(() => { if (MODE !== 'connecting') scheduleRender(); }, 60000);
+
+/* ============ 操作 ============ */
+const lastOfferPatch = (r, result, extra) => {
+  const offers = clone(r.offers || []);
+  if (offers.length) Object.assign(offers[offers.length - 1], { result, answeredAt: nowIso() }, extra || {});
+  return offers;
+};
+const ACT = {
+  role(d) { UI.role = d.v; ls.set('meguru.role', d.v); seenOffers = null; checkNewOffers(); render(); },
+  optab(d) { UI.opTab = d.v; UI.csv = ''; render(); },
+  mtab(d) { UI.mtab = d.v; UI.edit = null; UI.imp = null; UI.confirm = null; render(); },
+  drvtab(d) { UI.drvTab = d.v; render(); },
+  filter(d) { UI.filter = d.v; render(); },
+  ask(d) { UI.confirm = d.v; render(); },
+  unconfirm() { UI.confirm = null; render(); },
+  'toast-x'() { UI.toast = ''; render(); },
+  find(d) { UI.sel = UI.sel === d.id ? null : d.id; render(); },
+  'imp-open'() { UI.imp = { coll: UI.mtab, text: '', progress: '' }; UI.edit = null; render(); },
+  'imp-close'() { UI.imp = null; render(); },
+  async 'imp-run'() {
+    const imp = UI.imp, res = prepImport(imp.coll, imp.text), ok = (res.items || []).filter(i => !i.errs.length);
+    imp.busy = true; let n = 0;
+    for (const it of ok) {
+      const prev = S[imp.coll][it.id] || {}; const full = { ...prev, ...it.data }; delete full.id;
+      if (!(await put(imp.coll, it.id, full))) break;
+      S[imp.coll][it.id] = { ...full, id: it.id };
+      n++; if (n % 10 === 0) { imp.progress = `${n}/${ok.length}件 登録中…`; render(); }
+    }
+    imp.busy = false; imp.progress = ''; imp.text = '';
+    toast(`${SCHEMA[imp.coll].title}を${n}件登録しました。`);
+    if (n === ok.length) UI.imp = null;
+    render();
+  },
+  'cleanup-ask'(d) { UI.cleanup = d.v || null; render(); },
+  async 'cleanup-run'() {
+    const kind = UI.cleanup; UI.cleanupBusy = true; render();
+    const n = await runCleanup(kind);
+    UI.cleanup = null; UI.cleanupBusy = false;
+    toast(kind === 'anon' ? `利用者${n}名の名簿を削除し、記録を匿名化しました。` : 'すべての記録を削除しました。');
+  },
+  'survey-open'(d) { UI.survey = d.id; render(); },
+  'survey-close'() { UI.survey = null; render(); },
+  mapv(d) { UI.mapV = d.v; render(); },
+  'goto-date'(d) { UI.date = d.v; UI.filter = 'all'; render(); },
+  'copy-last'(d) {
+    const x = S.requests[d.id];
+    Object.assign(UI.form, { time: x.pickupTime, pickupPlaceId: x.pickupPlaceId, pickupDetail: x.pickupDetail || '', destPlaceId: x.destPlaceId, party: x.party, care: x.care || '', wheelchair: !!x.wheelchair });
+    render();
+  },
+  async offer(d) {
+    const r = S.requests[d.id], x = evaluate(S.vehicles[d.v], r);
+    UI.sel = null;
+    await patch('requests', r.id, { status: 'offered', vehicleId: d.v, estAddMin: x.added, estDropMin: x.dropAt, shared: x.shared,
+      offers: [...clone(r.offers || []), { vehicleId: d.v, at: nowIso(), result: 'pending' }] });
+    toast(`${vName(d.v)} に依頼しました。運転手の返答を待っています。`);
+  },
+  async withdraw(d) { const r = S.requests[d.id]; await patch('requests', r.id, { status: 'new', vehicleId: null, offers: lastOfferPatch(r, 'withdrawn') }); },
+  async taxi(d) { UI.sel = null; await patch('requests', d.id, { status: 'taxi', vehicleId: null }); toast('提携タクシーへの切替として記録しました。タクシー会社へ連絡してください。'); },
+  async cancel(d) { UI.confirm = null; const r = S.requests[d.id]; await patch('requests', d.id, { status: 'cancelled', offers: r.status === 'offered' ? lastOfferPatch(r, 'withdrawn') : r.offers || [] }); },
+  async notified(d) { await patch('requests', d.id, { riderNotified: true, ev: { notifiedAt: nowIso() } }); },
+  async noshowok(d) { await patch('requests', d.id, { noshowChecked: true }); },
+  'edit-new'() { UI.edit = { coll: UI.mtab, id: null, data: UI.mtab === 'vehicles' ? { available: true, capacity: 4, hoursStart: '08:00', hoursEnd: '18:00' } : UI.mtab === 'riders' ? { consentDate: todayStr() } : { kind: 'area' } }; UI.confirm = null; render(); },
+  edit(d) { UI.edit = { coll: UI.mtab, id: d.id, data: clone(S[UI.mtab][d.id]) }; UI.confirm = null; render(); window.scrollTo({ top: 0 }); },
+  'edit-cancel'() { UI.edit = null; render(); },
+  async 'edit-del'() {
+    const { coll, id } = UI.edit;
+    const used = coll === 'places' ? Object.values(S.vehicles).some(v => v.basePlaceId === id) || Object.values(S.riders).some(r => r.homePlaceId === id) : false;
+    if (used) { UI.confirm = null; toast('この地点は車両の拠点か利用者の自宅に使われているため削除できません。'); return; }
+    if (await remove(coll, id)) { UI.edit = null; UI.confirm = null; toast('削除しました。'); }
+  },
+  async 'sample-del'() {
+    UI.confirm = null;
+    let n = 0;
+    for (const c of COLLS) for (const d of Object.values(S[c])) if (d.sample) { if (await remove(c, d.id)) n++; }
+    toast(`デモデータ ${n}件を削除しました。`);
+  },
+  async 'demo-reset'(d) {
+    if (UI.demoProgress) return;
+    const preset = UI.preset || currentPreset(), day = (d && d.date) || todayStr(); // date はテスト用
+
+    if (MODE === 'demo' || SANDBOX) {
+      store = memStore(seedData(todayStr(), preset)); subscribeAll();
+      UI.date = todayStr(); UI.filter = 'need'; UI.sel = null; UI.mapV = null; ls.set('meguru.guideHidden', false);
+      toast(`「${DEMO_PRESETS[preset].label}」のデモデータに切り替えました。`); return;
+    }
+    const data = seedData(day, preset);
+    const keep = new Set(COLLS.flatMap(c => Object.keys(data[c] || {}).map(id => c + '/' + id)));
+    const old = COLLS.flatMap(c => Object.values(S[c]).filter(d => d.sample && !keep.has(c + '/' + d.id)).map(d => [c, d.id]));
+    // 運用設定は、入力済みの電話番号などを残し、シナリオに合わせた所要時間の設定だけを入れ替える
+    if (S.settings.main) { const { id, ...cur } = S.settings.main; data.settings.main = { ...cur, ...DEMO_PRESETS[preset].settings, demoPreset: preset }; }
+    // 共有データとまったく同じ内容のものは書き込まない(前日に作ったデータは大半がそのまま使える)
+    const writes = COLLS.flatMap(c => Object.entries(data[c] || {}).filter(([id, d]) => !sameDoc(S[c][id], d)).map(([id, d]) => [c, id, d]));
+    const jobs = [...old.map(([c, id]) => () => remove(c, id)), ...writes.map(([c, id, d]) => () => put(c, id, d))];
+    const total = jobs.length; let n = 0, failed = 0;
+    UI.demoProgress = `デモデータを作成中… 0/${total}`; render();
+    await runPool(jobs, 8, ok => { if (!ok) failed++; if (++n % 10 === 0 || n === total) { UI.demoProgress = `デモデータを作成中… ${n}/${total}`; render(); } });
+    if (failed) { UI.demoProgress = ''; toast(`${failed}件を書き込めませんでした。もう一度「今日のデモを用意する」を押してください。`); return; }
+    UI.demoProgress = ''; UI.date = todayStr(); UI.filter = 'need'; UI.sel = null; UI.mapV = null;
+    ls.set('meguru.guideHidden', false);
+    toast('デモデータを今日の日付で作り直しました。');
+  },
+  preset(d) { UI.preset = d.v; render(); },
+  'guide-hide'() { ls.set('meguru.guideHidden', true); render(); },
+  'guide-show'() { ls.set('meguru.guideHidden', false); render(); },
+  'guide-find'() {
+    const r = Object.values(S.requests).filter(x => x.date === todayStr() && (x.status === 'new' || x.status === 'declined')).sort(byTime)[0];
+    UI.opTab = 'board'; UI.date = todayStr(); UI.filter = 'need'; UI.sel = r ? r.id : null; render();
+    if (!r) toast('未配車の依頼がありません。「登録情報」からデモデータを作り直してください。');
+  },
+  'guide-driver'() {
+    const r = Object.values(S.requests).find(x => x.status === 'offered' && x.date === todayStr());
+    UI.role = 'driver'; ls.set('meguru.role', 'driver'); UI.drvTab = 'req';
+    if (r) { UI.myVehicle = r.vehicleId; ls.set('meguru.vehicle', r.vehicleId); }
+    seenOffers = null; checkNewOffers(); render();
+  },
+  'guide-kpi'() { UI.opTab = 'kpi'; UI.period = '7d'; render(); },
+  async csv() {
+    const data = buildCsv(), name = `meguru_実績_${UI.period}_${todayStr()}.csv`;
+    const dl = window.claude && claude.use ? await claude.use('downloads').catch(() => null) : null;
+    if (dl) { try { await dl.save({ filename: name, data }); UI.csv = ''; toast('CSVを保存しました。'); return; } catch (e) { if (e && e.code === 'declined') return; } }
+    UI.csv = data; render();
+  },
+  async copy(d) { try { await navigator.clipboard.writeText(d.v); toast('番号をコピーしました。'); } catch (e) { toast('コピーできませんでした。番号を長押しして選択してください。'); } },
+  'pick-vehicle'(d) { UI.myVehicle = d.v; ls.set('meguru.vehicle', d.v); UI.drvTab = 'req'; seenOffers = null; checkNewOffers(); render(); },
+  'change-vehicle'() { UI.myVehicle = null; ls.set('meguru.vehicle', null); seenOffers = null; render(); },
+  sound() { const on = !soundOn(); ls.set('meguru.sound', on); if (on) { ensureAudio(); chime(); } render(); },
+  async avail() { const v = S.vehicles[UI.myVehicle]; await patch('vehicles', v.id, { available: v.available === false }); },
+  async accept(d) {
+    const r = S.requests[d.id];
+    await patch('requests', r.id, { status: 'accepted', offers: lastOfferPatch(r, 'accepted'), ev: { acceptedAt: nowIso() } }, { offline: true });
+    toast('承諾しました。運営者から利用者へ確定の連絡が入ります。');
+  },
+  'decline-open'(d) { UI.declining = d.id; render(); },
+  'decline-cancel'() { UI.declining = null; render(); },
+  async decline(d) {
+    const r = S.requests[d.id]; UI.declining = null;
+    await patch('requests', r.id, { status: 'declined', vehicleId: null, offers: lastOfferPatch(r, 'declined', { reason: d.v }) }, { offline: true });
+    toast('辞退しました。運営者が次の候補車両へ依頼を回します。');
+  },
+  async arrived(d) { await patch('requests', d.id, { ev: { arrivedAt: nowIso() } }, { offline: true }); },
+  async boarded(d) { await patch('requests', d.id, { status: 'onboard', ev: { boardedAt: nowIso() } }, { offline: true }); toast('乗車を記録しました。'); },
+  async dropped(d) { await patch('requests', d.id, { status: 'done', ev: { droppedAt: nowIso() } }, { offline: true }); toast('降車を記録しました。お疲れさまでした。'); },
+  async noshow(d) { UI.confirm = null; await patch('requests', d.id, { status: 'noshow', noshowNote: '到着したが乗車なし', ev: { noshowAt: nowIso() } }, { offline: true }); toast('運営者に報告しました。'); },
+};
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  const fn = ACT[b.dataset.act];
+  if (fn) { e.preventDefault(); fn(b.dataset, b); }
+});
+document.addEventListener('input', e => onField(e.target, false));
+document.addEventListener('change', e => onField(e.target, true));
+function onField(el, commit) {
+  if (el.id === 'imp-file') { if (commit && el.files && el.files[0] && UI.imp) readCsvFile(el.files[0]); return; }
+  if (el.dataset.imp) { if (UI.imp) { UI.imp.text = el.value; if (commit) render(); } return; }
+  if (el.dataset.bind) {
+    const k = el.dataset.bind, f = UI.form;
+    f[k] = el.type === 'checkbox' ? el.checked : el.value;
+    if (k === 'riderId' && commit) {
+      const r = S.riders[el.value];
+      if (r) Object.assign(f, { pickupPlaceId: r.homePlaceId || '', pickupDetail: r.homeDetail || '', care: r.care || '', wheelchair: !!r.wheelchair });
+      render();
+    } else if ((commit && el.tagName === 'SELECT') || el.dataset.live) render();
+  } else if (el.dataset.ui && commit) {
+    UI[el.dataset.ui] = el.value; UI.csv = ''; render();
+  } else if (el.dataset.k && UI.edit) {
+    UI.edit.data[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value;
+  } else if (el.dataset.k && el.closest('[data-coll="settings"]')) {
+    UI.edit = { coll: 'settings', id: 'main', data: { ...cfg(), [el.dataset.k]: el.type === 'checkbox' ? el.checked : el.value } };
+  }
+}
+document.addEventListener('submit', async e => {
+  const form = e.target; e.preventDefault();
+  if (form.dataset.form === 'recv') return submitReception();
+  if (form.dataset.form === 'edit') return submitEdit(form);
+  if (form.dataset.form === 'survey') return saveSurvey(form.dataset.id, {
+    satisfaction: +form.querySelector('#sv-sat').value, easier: form.querySelector('#sv-easier').value, comment: form.querySelector('#sv-comment').value.trim(),
+  });
+});
+async function saveSurvey(reqId, v) {
+  const r = S.requests[reqId];
+  const doc = { requestId: reqId, riderId: r.riderId, date: r.date, ...v, at: nowIso(), ...(r.sample ? { sample: true } : {}) };
+  if (await put('surveys', reqId, doc)) { S.surveys[reqId] = { ...doc, id: reqId }; UI.survey = null; toast('アンケートを記録しました。'); }
+}
+async function submitReception() {
+  const f = UI.form;
+  const r = S.riders[f.riderId];
+  const missing = [!r && '利用者', !f.date && '日付', !f.time && 'お迎え希望時刻', !f.pickupPlaceId && '乗車地', !f.destPlaceId && '行き先'].filter(Boolean);
+  if (missing.length) { f.err = `${missing.join('・')}を入力してください。`; return render(); }
+  if (f.pickupPlaceId === f.destPlaceId) { f.err = '乗車地と行き先が同じです。'; return render(); }
+  const n = +f.repeat || 0, group = n ? newId('g') : null;
+  const docs = Array.from({ length: n + 1 }, (_, k) => [newId('q'), {
+    riderId: r.id, riderNo: r.no, date: addDays(f.date, 7 * k), pickupTime: f.time, pickupPlaceId: f.pickupPlaceId, pickupLabel: pName(f.pickupPlaceId),
+    pickupDetail: f.pickupDetail, destPlaceId: f.destPlaceId, destLabel: pName(f.destPlaceId), party: +f.party || 1, care: f.care,
+    wheelchair: !!f.wheelchair, status: 'new', vehicleId: null, offers: [], ev: {}, riderNotified: false, createdAt: nowIso(), log: [logEntry('電話受付')],
+    ...(group ? { repeatGroup: group, repeatIndex: k + 1, repeatTotal: n + 1 } : {}),
+    ...(hasDemo() ? { sample: true } : {}), // デモ中の受付は、デモを作り直すと一緒に消える
+  }]);
+  docs.forEach(([id, doc]) => S.requests[id] = { ...doc, id });
+  UI.sel = docs[0][0]; UI.date = f.date; UI.filter = 'need'; UI.form = blankForm(); UI.form.date = f.date;
+  render();
+  for (const [id, doc] of docs) if (!(await put('requests', id, doc))) { delete S.requests[id]; break; }
+  if (n) toast(`${n + 1}回分(${dateLabel(docs[0][1].date)}〜${dateLabel(docs[n][1].date)})を受け付けました。配車は各日に行います。`);
+}
+async function submitEdit(form) {
+  const coll = form.dataset.coll, sc = SCHEMA[coll];
+  const data = {};
+  for (const fd of sc.fields) {
+    const el = form.querySelector(`[data-k="${fd.k}"]`);
+    let v = fd.type === 'bool' ? el.checked : el.value.trim();
+    if (fd.type === 'num' && v !== '') v = Number(v);
+    if (fd.req && (v === '' || v == null || (fd.type === 'num' && isNaN(v)))) {
+      UI.edit = { coll, id: form.dataset.id || null, data: { ...(UI.edit?.data || {}), ...data }, err: `「${fd.l}」を入力してください。` };
+      return render();
+    }
+    data[fd.k] = v;
+  }
+  if (coll === 'riders' && Object.values(S.riders).some(x => x.no === data.no && x.id !== form.dataset.id)) {
+    UI.edit = { coll, id: form.dataset.id || null, data, err: 'この利用者番号はすでに使われています。' }; return render();
+  }
+  if (coll === 'vehicles' && (data.capacity < 1 || data.capacity > 30)) { UI.edit = { coll, id: form.dataset.id || null, data, err: '定員は1〜30で入力してください。' }; return render(); }
+  const id = coll === 'settings' ? 'main' : (form.dataset.id || newId(coll[0]));
+  const prev = S[coll][id] || {};
+  const full = { ...prev, ...data }; delete full.id;
+  if (form.dataset.id && prev.sample) full.sample = true;
+  if (await put(coll, id, full)) { UI.edit = null; toast('保存しました。'); }
+}
+
+/* ============ 2画面表示と自動デモ ============
+   2画面: 横幅の広い画面では、オペレーター画面の右に運転手のスマホ画面を並べる(売り込みのデモ用)。
+   自動デモ: 電話受付から実績までを字幕つきで自動で進める。共有データは変えず、この画面の中だけの体験モードで動く。 */
+const isWide = () => (window.innerWidth || 0) >= 1280;
+const splitOn = () => !!UI.split && isWide() && UI.role === 'operator' && CAN.operator;
+let SANDBOX = null; // 体験モード中は、元のデータ保存層と権限を退避しておく
+function enterSandbox() {
+  if (SANDBOX) return;
+  SANDBOX = { store, MODE, CAN: { ...CAN }, role: UI.role };
+  store = memStore(seedData(todayStr(), currentPreset())); CAN.operator = true; CAN.write = true;
+  subscribeAll();
+}
+function leaveSandbox() {
+  if (!SANDBOX) return;
+  store = SANDBOX.store; Object.assign(CAN, SANDBOX.CAN); UI.role = CAN.operator ? SANDBOX.role : 'driver';
+  SANDBOX = null; UI.sel = null; UI.form = blankForm();
+  subscribeAll();
+}
+const wait = ms => new Promise(r => setTimeout(r, ms));
+/* 自動デモの電話: 体験の入口の依頼(q_demo_a)と同じ地区・同じ行き先の方にして、乗合が見られるようにする */
+function tourPlan() {
+  const a = S.requests.q_demo_a, rs = Object.values(S.riders).filter(r => !r.wheelchair && (!a || r.id !== a.riderId));
+  const r = (a && rs.find(x => x.homePlaceId === a.pickupPlaceId)) || rs[0];
+  return r ? { r, dest: a ? a.destPlaceId : Object.keys(S.places).find(id => S.places[id].kind === 'hospital'), time: '10:45' } : null;
+}
+const TOUR = [
+  { t: () => { const p = tourPlan(); return p ? `電話が入りました。${pName(p.r.homePlaceId)}の${p.r.name}さんから「10時45分に、${pName(p.dest)}へ行きたいのですが」。` : '電話が入りました。'; }, ms: 4200, run: () => {
+    const p = tourPlan(); if (!p) return; const r = p.r;
+    UI.role = 'operator'; UI.opTab = 'board'; UI.date = todayStr(); UI.filter = 'all'; UI.sel = null;
+    UI.form = Object.assign(blankForm(), { riderId: r.id, pickupPlaceId: r.homePlaceId, pickupDetail: r.homeDetail, care: r.care, wheelchair: !!r.wheelchair, time: p.time, destPlaceId: p.dest });
+  } },
+  { t: '受け付けると、参加している全車両の予定・空席・時間帯から、乗せられる車が自動で並びます。追加時間・乗合・お迎え時刻を比べて、人が選びます。', ms: 6500, run: async () => {
+    await submitReception();
+    UI.tourReq = UI.sel;
+  } },
+  { t: 'いちばん負担の少ない車に依頼します。依頼はその車の運転手のスマホに届きます。', ms: 4200, run: async () => {
+    const req = S.requests[UI.tourReq], best = candidates(req).ok[0];
+    if (!best) return;
+    UI.tourV = best.v.id; UI.myVehicle = best.v.id; UI.drvTab = 'req'; UI.mapV = best.v.id;
+    if (!isWide()) UI.role = 'driver';
+    seenOffers = null; checkNewOffers();
+    await ACT.offer({ id: req.id, v: best.v.id });
+  } },
+  { t: '運転手は、乗車地・行き先・配慮事項を見て「承諾する」を押します。利用者の氏名や電話番号は、運転手には表示されません。', ms: 5200, run: async () => {
+    await wait(1500); await ACT.accept({ id: UI.tourReq });
+  } },
+  { t: '承諾されると、地図に新しい停車順が反映されます。オペレーターは利用者へ、お迎えの時刻を折り返し電話で伝えます。', ms: 5200, run: async () => {
+    UI.role = 'operator'; UI.sel = null; UI.mapV = UI.tourV;
+    await ACT.notified({ id: UI.tourReq });
+  } },
+  { t: '当日、運転手は到着・乗車・降車をボタンで記録します(ここでは早送りしています)。電波が届かない場所でも記録は残ります。', ms: 5600, run: async () => {
+    UI.drvTab = 'run'; if (!isWide()) UI.role = 'driver';
+    await wait(900); await ACT.arrived({ id: UI.tourReq });
+    await wait(900); await ACT.boarded({ id: UI.tourReq });
+    await wait(1200); await ACT.dropped({ id: UI.tourReq });
+  } },
+  { t: '記録はすぐに実績へ反映されます。座席稼働率・乗合の件数・満足度を、日ごとの推移と一緒にそのまま報告に使えます(数字は架空のデモデータです)。', ms: 6500, run: () => {
+    UI.role = 'operator'; UI.opTab = 'kpi'; UI.period = '7d'; UI.drvTab = 'req';
+  } },
+  { t: '自動デモはここまでです。このまま自由に操作できます。この画面の中だけの体験なので、共有データは変わりません。', ms: 0, run: () => { UI.opTab = 'board'; } },
+];
+let tourTimer = null, tourRunning = false;
+async function tourGo(i) {
+  if (!UI.tour) return;
+  clearTimeout(tourTimer);
+  UI.tour.step = i; tourRunning = true; render();
+  try { await TOUR[i].run(); } catch (e) {}
+  tourRunning = false; render();
+  if (UI.tour && UI.tour.playing && TOUR[i].ms && i < TOUR.length - 1) tourTimer = setTimeout(() => tourGo(i + 1), TOUR[i].ms);
+}
+function tourStart() {
+  ensureAudio();
+  enterSandbox();
+  UI.split = true; ls.set('meguru.split', true);
+  UI.tour = { step: 0, playing: true };
+  setTimeout(() => tourGo(0), 50);
+}
+function tourBox() {
+  if (!UI.tour) return '';
+  const i = UI.tour.step, last = i === TOUR.length - 1;
+  return `<div class="tour" role="dialog" aria-label="自動デモ" aria-live="polite">
+    <div class="tour-h"><span class="mono">自動デモ ${i + 1}/${TOUR.length}</span><div class="tour-bar"><i style="width:${(i + 1) / TOUR.length * 100}%"></i></div></div>
+    <p>${esc(typeof TOUR[i].t === 'function' ? TOUR[i].t() : TOUR[i].t)}</p>
+    <div class="row-btns">${last ? `<button class="btn btn-gold btn-sm" data-act="tour-restart">最初から見る</button><button class="btn btn-ghost btn-sm" data-act="tour-close">字幕を閉じる</button>`
+      : `<button class="btn btn-ghost btn-sm" data-act="tour-pause">${UI.tour.playing ? '一時停止' : '再開'}</button><button class="btn btn-gold btn-sm" data-act="tour-next" ${tourRunning ? 'disabled' : ''}>次へ</button><button class="btn btn-ghost btn-sm" data-act="tour-close">終了</button>`}</div>
+  </div>`;
+}
+Object.assign(ACT, {
+  'tour-start'() { tourStart(); },
+  'tour-next'() { if (!tourRunning && UI.tour) tourGo(Math.min(UI.tour.step + 1, TOUR.length - 1)); },
+  'tour-pause'() { if (!UI.tour) return; UI.tour.playing = !UI.tour.playing; clearTimeout(tourTimer); if (UI.tour.playing && !tourRunning) tourTimer = setTimeout(() => tourGo(UI.tour.step + 1), 1500); render(); },
+  'tour-close'() { clearTimeout(tourTimer); UI.tour = null; render(); },
+  'tour-restart'() { clearTimeout(tourTimer); leaveSandbox(); tourStart(); },
+  'sandbox-end'() { clearTimeout(tourTimer); UI.tour = null; leaveSandbox(); toast('体験を終えました。共有データの画面に戻りました。'); },
+  split() { UI.split = !UI.split; ls.set('meguru.split', UI.split); if (UI.split && !UI.myVehicle) { const v = Object.values(S.vehicles)[0]; if (v) UI.myVehicle = v.id; } seenOffers = null; checkNewOffers(); render(); },
+});
+window.addEventListener('resize', () => { if (UI.split) scheduleRender(); });
+
+/* デモの作り直し用: 中身が同じか(画面用に付けた id は比べない)、同時に何件まで書き込むか */
+const canon = v => Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).filter(k => k !== 'id').sort().map(k => [k, canon(v[k])])) : v;
+const sameDoc = (a, b) => !!a && JSON.stringify(canon(a)) === JSON.stringify(canon(b));
+async function runPool(jobs, size, onDone) {
+  let next = 0;
+  const worker = async () => { while (next < jobs.length) { const job = jobs[next++]; let ok = false; try { ok = await job(); } catch (e) { ok = false; } onDone(ok !== false); } };
+  await Promise.all(Array.from({ length: Math.min(size, jobs.length) }, worker));
+}
+
+/* ============ 起動 ============ */
+function onData(c, o) {
+  const out = {};
+  for (const id in o) out[id] = { ...o[id], id };
+  for (const q of queue) if (q.c === c && out[q.id]) out[q.id] = deepMerge(out[q.id], q.p);
+  S[c] = out; loaded.add(c);
+  if (c === 'requests') checkNewOffers();
+  scheduleRender();
+}
+async function boot() {
+  render();
+  let db = null, user = null;
+  if (window.claude && typeof window.claude.use === 'function') {
+    try { [db, user] = await Promise.all([claude.use('db'), claude.use('user')]); } catch (e) {}
+  }
+  if (db) {
+    store = dbStore(db); MODE = 'live'; USER = user;
+    ME = user ? await user.id() : null;
+    CAN.operator = user ? await user.canEdit() : false;
+    const w = user ? await user.can('data.write') : null;
+    CAN.write = w !== false;
+  } else {
+    store = memStore(seedData(todayStr())); MODE = 'demo'; CAN.operator = true;
+  }
+  if (!CAN.operator) UI.role = 'driver';
+  else if (!UI.role) UI.role = 'operator';
+  subscribeAll();
+  render(); flushQueue();
+  /* プレゼン用: ?tour=1 で自動デモを始める(PowerPoint への埋め込み・動画の撮影用) */
+  try { if (new URLSearchParams(location.search).get('tour') === '1') setTimeout(tourStart, 800); } catch (e) {}
+}
+/* 購読: 体験モードへの切り替えで作り直すため、世代番号で古い購読の通知を捨てる */
+let GEN = 0, UNSUBS = [];
+function subscribeAll() {
+  const g = ++GEN;
+  UNSUBS.forEach(u => { try { u && u(); } catch (e) {} }); UNSUBS = [];
+  COLLS.forEach(c => { S[c] = {}; loaded.delete(c); });
+  const colls = ['vehicles', 'places', 'requests', 'settings'].concat(CAN.operator ? ['riders', 'surveys'] : []);
+  colls.forEach(c => UNSUBS.push(store.watch(c, (o, meta) => { if (g !== GEN) return; if (meta) UI.cached = meta.fromCache; onData(c, o); },
+    () => { if (g === GEN) toast('データの受信が止まりました。ページを再読み込みしてください。'); })));
+}
+boot();
+</script>
