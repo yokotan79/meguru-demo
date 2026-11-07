@@ -1841,13 +1841,17 @@ const TOUR = [
   { t: '自動デモはここまでです。このまま自由に操作できます。この画面の中だけの体験なので、共有データは変わりません。', ms: 0, run: () => { UI.opTab = 'board'; } },
 ];
 let tourTimer = null, tourRunning = false;
+/* ナレーション付き動画の撮影用: ?steps=12000,11000,… で各場面の長さ(ミリ秒)を指定できる */
+let TOUR_MS = null;
+try { const q = new URLSearchParams(location.search).get('steps'); if (q) TOUR_MS = q.split(',').map(Number); } catch (e) {}
 async function tourGo(i) {
   if (!UI.tour) return;
   clearTimeout(tourTimer);
   UI.tour.step = i; tourRunning = true; render();
   try { await TOUR[i].run(); } catch (e) {}
   tourRunning = false; render();
-  if (UI.tour && UI.tour.playing && TOUR[i].ms && i < TOUR.length - 1) tourTimer = setTimeout(() => tourGo(i + 1), TOUR[i].ms);
+  const ms = TOUR_MS && TOUR_MS[i] > 0 ? TOUR_MS[i] : TOUR[i].ms;
+  if (UI.tour && UI.tour.playing && ms && i < TOUR.length - 1) tourTimer = setTimeout(() => tourGo(i + 1), ms);
 }
 function tourStart() {
   ensureAudio();
